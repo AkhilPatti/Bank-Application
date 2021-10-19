@@ -1,80 +1,179 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using System.Linq;
 using BankApp.Models;
 using BankApp.Models.Exceptions;
 namespace BankApp.Services
 {
-    class AccountService
+    public static class AccountService
     {
-        public List<Account> accounts= new List<Account>();
-        public static int noOfAccounts=0;
-        public void CreateAccount(string accountHolderName, string pin, string phoneNumber)
+        //private List<Account> accounts;
+        public static string bankId;
+        /*public static AccountService()
         {
-            noOfAccounts ++;
-            int accountId = noOfAccounts;
-            Account  newAccount = new Account(accountId, accountHolderName, pin, phoneNumber);
-
-            accounts.Add(newAccount);
-        }
-        public bool AccountValidator ( int id, string pin)
+            accounts = new List<Account>();
+        }*/
+        private static Bank FindBank(string bankId)
         {
-            if(id>noOfAccounts)
+            try
             {
+                return BankService.banks.Single(m => m.Id == bankId);
+            }
+            catch
+            {
+                throw new InvalidBankId();
+            }
+        }
+        public static string CreateAccount(string Name, string newPin, string Number, string bankId)
+        {
+            Bank bank = FindBank(bankId);
+            Account account = new Account
+            { accountId = BankService.GenerateRandomId(Name),
+                pin = newPin,
+                phoneNumber = Number,
+
+            };
+            if (!AccountExists(account.accountId, bankId))
+            {
+                bank.Accounts.Add(account);
+
+                return account.accountId;
+            }
+            throw new InvalidId();
+
+
+        }
+        private static bool AccountValidator(string id, string pin, string bankId)
+        {
+            Bank bank = FindBank(bankId);
+            try
+            {
+                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
+                if (account.pin != pin)
+                {
+
+                    throw new InvalidPin();
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+
                 throw new InvalidId();
             }
-            else if(accounts[id].pin!=pin)
-            {
-                throw new InvalidPin();
-            }
-            else
-            return true;
+
         }
-        public void Deposit(int amount,int id,string pin)
+
+        private static bool AccountExists(string id, string bankId)
         {
-                if(AccountValidator(id,pin))
-                {
-                    accounts[id].balance += amount;
-                    accounts[id].tranctionHistory.Add(new Tuple<int, int, int>(id, amount, accounts[id].balance));
+            Bank bank = FindBank(bankId);
+            try
+            {
+                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+
+        public static void Deposit(int amount, string id, string pin, string bankId)
+        {
+
+            Bank bank = FindBank(bankId);
+            if (AccountValidator(id, pin, bankId))
+            {
+                Account account = bank.Accounts.Single(m => String.Equals(m.accountId, id));
+                account.balance += amount;
+                UpdateTransaction(account, "", id, amount, TransactionType.Debit, bankId);
             }
 
         }
-        public void WithDraw (int amount,int id, string pin)
+        public static void WithDraw(int amount, string id, string pin, string bankId)
         {
-            if (AccountValidator(id, pin))
+            Bank bank = FindBank(bankId);
+            if (AccountValidator(id, pin, bankId))
             {
-                if (accounts[id].balance < amount)
+                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
+                if (account.balance < amount)
                 {
                     throw new NotEnoughBalance();
                 }
                 else
                 {
-                    accounts[id].balance -= amount;
-                    accounts[id].tranctionHistory.Add(new Tuple<int, int, int>(id, -amount, accounts[id].balance));
+                    account.balance -= amount;
+                    UpdateTransaction(account, "", id, amount, TransactionType.Credit, bankId);
                 }
             }
-           
+
         }
-        public void Transfer(int senderId, int receiverId,string senderPin,int amount)
+        public static void Transfer(string senderId, string receiverId, string senderPin, int amount, string bankId)
         {
-            if(AccountValidator(senderId,senderPin))
+            Bank bank = FindBank(bankId);
+            if (AccountValidator(senderId, senderPin, bankId))
             {
-                if(receiverId<noOfAccounts)
+                if (AccountExists(receiverId, bankId))
                 {
-                    accounts[senderId].balance -= amount;
+                    Account Raccount = bank.Accounts.First(m => String.Equals(m.accountId, receiverId));
+                    Raccount.balance += amount;
                     //updating Sender's tranaction History
-                    accounts[senderId].tranctionHistory.Add(new Tuple<int, int,int>(senderId, -amount, accounts[senderId].balance));
-                    
-                    accounts[receiverId].balance += amount;
+                    UpdateTransaction(Raccount, senderId, receiverId, amount, TransactionType.Debit, bankId);
+
+                    Account Saccount = bank.Accounts.First(m => String.Equals(m.accountId, senderId));
+                    Saccount.balance += amount;
                     //updating Receiver's tranaction History
-                    accounts[receiverId].tranctionHistory.Add(new Tuple<int, int, int>(receiverId, amount, accounts[receiverId].balance));
+                    UpdateTransaction(Saccount, receiverId, senderId, amount, TransactionType.Credit, bankId);
                 }
                 else
                 {
                     throw new InvalidReceiver();
                 }
             }
+
         }
 
+        public static void UpdateTransaction(Account account, string sourceId, string recieverId, int amount, TransactionType type, string bankId)
+        {
+            Transaction transaction = new Transaction
+            {
+                SourceAccountId = sourceId,
+                AccountId = recieverId,
+                Amount = amount,
+                Type = type,
+                On = DateTime.Now,
+                TransId = GenerateTransId(DateTime.Now.ToString("ddMMyyyy"), recieverId, bankId),
+
+            };
+            account.Transactions.Add(transaction);
+
+        }
+
+        internal static string GenerateTransId(string date, string AccountId, string bankId)
+        {
+            return "TXN" + bankId + AccountId + date;
+        }
+        public static List<Tuple<string, string, TransactionType, DateTime, int>> getTranactionDetails(string BankId, string AccountId, string pin)
+        {
+
+            var transList = new List<Tuple<string, string, TransactionType, DateTime, int>>();
+            if (AccountValidator(AccountId, pin, bankId))
+            {
+
+                Bank bank = FindBank(BankId);
+                Account account = bank.Accounts.Single(m => m.accountId == AccountId);
+                foreach (Transaction trans in account.Transactions)
+                {
+                    transList.Add(Tuple.Create(trans.SourceAccountId, trans.AccountId, trans.Type, trans.On, trans.Amount));
+                }
+            }
+            return transList;
+        }
+
+
+       }
     }
-}
+
