@@ -9,7 +9,7 @@ namespace BankApp.Models
     class RTGS : Transaction
     {
         public int minLimit = 400000;
-        private float chargesSame = 0; //charges for transcation between same BankAccounts
-        private float chargesDifferent = 2; //charges for transcation between different BankAccounts
+        private int sameAccountCharge = 0; //charges for transcation between same BankAccounts
+        private int otherAccountcharge = 2; //charges for transcation between different BankAccounts
     }
 }
