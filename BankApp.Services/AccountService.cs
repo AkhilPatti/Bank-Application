@@ -145,7 +145,7 @@ namespace BankApp.Services
                 Amount = amount,
                 Type = type,
                 On = DateTime.Now,
-                TransId = GenerateTransId(DateTime.Now.ToString("ddMMyyyy"), recieverId, bankId),
+                TranactionId = GenerateTransId(DateTime.Now.ToString("ddMMyyyy"), recieverId, bankId),
 
             };
             account.transactions.Add(transaction);

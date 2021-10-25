@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace BankApp.Models
 {
-    public enum  TransactionType
+    public enum TransactionType
     {
         Credit=1,
-        Debit
-    }
+        Debit=-1
+    };
 }

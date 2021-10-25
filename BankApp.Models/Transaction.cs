@@ -8,7 +8,7 @@ namespace BankApp.Models
 {
     public class Transaction
     {
-        public string TransId { get; set; }
+        public string TranactionId { get; set; }
         public string SourceAccountId { get; set; }
         public string AccountId { get; set; }
         public int Amount { get; set; }
