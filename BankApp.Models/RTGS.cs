@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace BankApp.Models
 {
-    class RTGS : Transaction
+    public class RTGS : Transaction
     {
         public int minLimit = 400000;
-        private int sameAccountCharge = 0; //charges for transcation between same BankAccounts
-        private int otherAccountcharge = 2; //charges for transcation between different BankAccounts
+        public float sameAccountCharge = 0; //charges for transcation between same BankAccounts
+        public float otherAccountcharge = 2; //charges for transcation between different BankAccounts
     }
 }

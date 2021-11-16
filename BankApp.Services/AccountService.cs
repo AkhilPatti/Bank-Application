@@ -7,17 +7,13 @@ namespace BankApp.Services
 {
     public static class AccountService
     {
-        //private List<Account> accounts;
         public static string bankId;
-        /*public static AccountService()
-        {
-            accounts = new List<Account>();
-        }*/
+       
         private static Bank FindBank(string bankId)
         {
             try
             {
-                return BankService.banks.Single(m => m.Id == bankId);
+                return BankService.banks.Single(m => m.id == bankId);
             }
             catch
             {
@@ -33,9 +29,9 @@ namespace BankApp.Services
                 phoneNumber = Number,
 
             };
-            if (!AccountExists(account.accountId, bankId))
+            if (!AccountExists(account.accountId, bank))
             {
-                bank.Accounts.Add(account);
+                bank.accounts.Add(account);
 
                 return account.accountId;
             }
@@ -43,12 +39,12 @@ namespace BankApp.Services
 
 
         }
-        private static bool AccountValidator(string id, string pin, string bankId)
+        public static bool AccountValidator(string id, string pin, Account account)
         {
-            Bank bank = FindBank(bankId);
+            
             try
             {
-                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
+                //Account account = bank.accounts.First(m => String.Equals(m.accountId, id));
                 if (account.pin != pin)
                 {
 
@@ -67,12 +63,12 @@ namespace BankApp.Services
 
         }
 
-        private static bool AccountExists(string id, string bankId)
+        private static bool AccountExists(string id, Bank bank)
         {
-            Bank bank = FindBank(bankId);
+            
             try
             {
-                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
+                Account account = bank.accounts.First(m => String.Equals(m.accountId, id));
                 return true;
             }
             catch (InvalidOperationException)
@@ -80,25 +76,47 @@ namespace BankApp.Services
                 return false;
             }
         }
+        public static Account FindAccount(string id, Bank bank)
+        {
+                
+                if (AccountExists(id, bank))
+                {
+                    Account account = bank.accounts.Single(m => String.Equals(m.accountId, id));
+                    return account;
+                }
+            else
+            {
+                throw new InvalidId();
+            }
 
-        public static void Deposit(int amount, string id, string pin, string bankId)
+
+        }
+        public static void Deposit(float amount, string id, string pin, string bankId,string currencyCode)
         {
 
             Bank bank = FindBank(bankId);
-            if (AccountValidator(id, pin, bankId))
+            Account account = FindAccount(id, bank);
+            amount = amount * ConvertToRupees(currencyCode, amount, bank);
+            if (AccountValidator(id, pin, account))
             {
-                Account account = bank.Accounts.Single(m => String.Equals(m.accountId, id));
                 account.balance += amount;
-                UpdateTransaction(account, "", id, amount, TransactionType.Debit, bankId);
+                UpdateTransaction(account, "", id, amount, TransactionType.Debit, bankId,"");
+                
             }
 
+        }
+        public static float ConvertToRupees(string currencyCode, float amount,Bank bank)
+        {
+            Currency currency = bank.currencies.Single(m=>m.currencyCode==currencyCode);
+            float newAmount = amount * currency.exchangeRate;
+            return newAmount;
         }
         public static void WithDraw(int amount, string id, string pin, string bankId)
         {
             Bank bank = FindBank(bankId);
-            if (AccountValidator(id, pin, bankId))
+            Account account = FindAccount(id,bank);
+            if (AccountValidator(id, pin, account))
             {
-                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
                 if (account.balance < amount)
                 {
                     throw new NotEnoughBalance();
@@ -106,27 +124,31 @@ namespace BankApp.Services
                 else
                 {
                     account.balance -= amount;
-                    UpdateTransaction(account, "", id, amount, TransactionType.Credit, bankId);
+                    UpdateTransaction(account, "", id, amount, TransactionType.Credit, bankId,"");
                 }
             }
 
         }
-        public static void Transfer(string senderId, string receiverId, string senderPin, int amount, string bankId)
+        public static void Transfer(string senderId, string receiverId, string senderPin, float amount, string rbankId, string sbankId,TransactionService transactionService)
         {
-            Bank bank = FindBank(bankId);
-            if (AccountValidator(senderId, senderPin, bankId))
+            Bank bank = FindBank(rbankId);
+            Account account = FindAccount(senderId,bank);
+            if (AccountValidator(senderId, senderPin, account))
             {
-                if (AccountExists(receiverId, bankId))
+                if (AccountExists(receiverId, bank))
                 {
-                    Account Raccount = bank.Accounts.First(m => String.Equals(m.accountId, receiverId));
-                    Raccount.balance += amount;
+                    Account Raccount = bank.accounts.First(m => String.Equals(m.accountId, receiverId));
+                    
                     //updating Sender's tranaction History
-                    UpdateTransaction(Raccount, senderId, receiverId, amount, TransactionType.Debit, bankId);
+                    UpdateTransaction(Raccount, senderId, receiverId, amount, TransactionType.Debit, sbankId,rbankId);
 
-                    Account Saccount = bank.Accounts.First(m => String.Equals(m.accountId, senderId));
-                    Saccount.balance += amount;
+                    Account Saccount = bank.accounts.First(m => String.Equals(m.accountId, senderId));
+                    float charge = Calculatecharge(amount, bank, sbankId, transactionService);
+                    Raccount.balance += amount;
+                    Saccount.balance -= (amount+charge);
+                    
                     //updating Receiver's tranaction History
-                    UpdateTransaction(Saccount, receiverId, senderId, amount, TransactionType.Credit, bankId);
+                    UpdateTransaction(Saccount, receiverId, senderId, amount, TransactionType.Credit, rbankId,sbankId);
                 }
                 else
                 {
@@ -136,43 +158,56 @@ namespace BankApp.Services
 
         }
 
-        public static void UpdateTransaction(Account account, string sourceId, string recieverId, int amount, TransactionType type, string bankId)
+
+        public static void UpdateTransaction(Account account, string sourceId, string recieverId, float _amount, TransactionType type, string sBankId,string rBankId)
         {
             Transaction transaction = new Transaction
             {
-                SourceAccountId = sourceId,
-                AccountId = recieverId,
-                Amount = amount,
-                Type = type,
-                On = DateTime.Now,
-                TranactionId = GenerateTransId(DateTime.Now.ToString("ddMMyyyy"), recieverId, bankId),
+                sourceAccountId = sourceId,
+                accountId = recieverId,
+                amount = _amount,
+                type = type,
+                on = DateTime.Now,
+                sourceBankId = sBankId,
+                recieverBankId =rBankId,
+                tranactionId = GenerateTransId(DateTime.Now.ToString("ddMMyyyy"), sourceId, sBankId),
 
             };
             account.transactions.Add(transaction);
 
         }
 
+        internal static float Calculatecharge(float amount, Bank bank, string sbankId, TransactionService transactionService)
+        {
+            string rbankId = bank.id;
+            if (transactionService == TransactionService.IMPS)
+            {
+                if (String.Equals(rbankId, sbankId))
+                {
+                    amount=  amount * bank.imps.sameAccountCharge;
+                }
+                else
+                {
+                    amount= amount * bank.imps.sameAccountCharge;
+                }
+            }
+            else if (transactionService == TransactionService.RTGS)
+            {
+                if (String.Equals(rbankId, sbankId))
+                {
+                   amount= amount * bank.rtgs.sameAccountCharge;
+                }
+                else
+                {
+                    amount=  amount * bank.rtgs.sameAccountCharge;
+                }
+            }
+            return amount;
+        }
         internal static string GenerateTransId(string date, string AccountId, string bankId)
         {
             return "TXN" + bankId + AccountId + date;
         }
-        public static List<Tuple<string, string, TransactionType, DateTime, int>> getTranactionDetails(string BankId, string AccountId, string pin)
-        {
-
-            var transList = new List<Tuple<string, string, TransactionType, DateTime, int>>();
-            if (AccountValidator(AccountId, pin, bankId))
-            {
-
-                Bank bank = FindBank(BankId);
-                Account account = bank.Accounts.Single(m => m.accountId == AccountId);
-                foreach (Transaction trans in account.transactions)
-                {
-                    transList.Add(Tuple.Create(trans.SourceAccountId, trans.AccountId, trans.Type, trans.On, trans.Amount));
-                }
-            }
-            return transList;
-        }
-
 
        }
     }

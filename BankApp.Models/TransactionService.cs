@@ -4,10 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BankApp.Services
+namespace BankApp.Models
 {
-    class staffservice
+    public enum TransactionService
     {
-
-    }
+        IMPS=1,
+        RTGS,
+    };
 }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BankApp.Models
 {
-    class BankStaff
+    public class BankStaff
     {
         public string staffname;
         public string staffId;

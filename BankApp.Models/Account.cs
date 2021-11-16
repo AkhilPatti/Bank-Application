@@ -8,7 +8,7 @@ namespace BankApp.Models
         public string accountHolderName { get; set; }
         public string pin { get; set; }
         public string phoneNumber { get; set; }
-        public int balance { get; set; }
+        public float balance { get; set; }
         public List<Transaction> transactions { get; set; }
        
 
