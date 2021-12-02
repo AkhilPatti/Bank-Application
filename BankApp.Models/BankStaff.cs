@@ -8,7 +8,7 @@ namespace BankApp.Models
 {
     public class BankStaff
     {
-        public string staffname;
+        public string staffName;
         public string staffId;
         public string password;
         public Genders gender;

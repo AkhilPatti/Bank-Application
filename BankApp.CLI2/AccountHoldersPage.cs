@@ -8,7 +8,7 @@ namespace BankApp.CLI2
 {
     public enum HoldersOptions
     {
-        DepositAmount,
+        DepositAmount=1,
         WithdrawAmount,
         TranferFunds,
         ViewTransactionHistory,
@@ -18,11 +18,14 @@ namespace BankApp.CLI2
     {
         public void Display()
         {
-            HoldersOptions choosen = (HoldersOptions)Enum.Parse(typeof(HoldersOptions),Console.ReadLine());
             bool tryAgain = true;
+           
             while (tryAgain)
             {
-
+                Console.WriteLine("Chose the Below Options:");
+                Console.WriteLine("1.Deposit\n2.WIthDrawAmount\n3.TransferFunds\n4. View Transaction History\n 6. Exit");
+                HoldersOptions choosen = (HoldersOptions)Enum.Parse(typeof(HoldersOptions), Console.ReadLine());
+                
                 switch (choosen)
                 {
                     case HoldersOptions.DepositAmount:
@@ -38,8 +41,8 @@ namespace BankApp.CLI2
                                 Bank bank = BankService.FindBank(bankId);
                                 string currencyCode = Capture.CaptureCurrency(bank); 
                                 int amount = Capture.CaptureAmount();
-                                
-                                AccountService.Deposit(amount, id, pin, bankId,currencyCode);
+                                Console.WriteLine("Your Account Balance is: ");
+                                Console.WriteLine(AccountService.Deposit(amount, id, pin, bankId, currencyCode));
 
                             }
                             catch (InvalidId ex)
@@ -50,12 +53,12 @@ namespace BankApp.CLI2
                             catch(InvalidCurrencyCode ex)
                             {
                                 Console.WriteLine(ex.Message);
-                                throw;
+                                
                             }
                             catch
                             {
                                 Console.WriteLine("Enter Valid Details");
-                                throw;
+                                
                             }
                             break;
                         }
@@ -70,8 +73,9 @@ namespace BankApp.CLI2
                                 pin = details.Item2;
                                 Console.WriteLine("Enter The Amount in INR only");
                                 int amount = Capture.CaptureAmount();
-                                string bankId = Console.ReadLine();
-                                AccountService.WithDraw(amount, id, pin, bankId);
+                                string bankId = details.Item3;
+                                Console.Write("Your current Balance is ");
+                                Console.WriteLine(AccountService.WithDraw(amount, id, pin, bankId));
                                 break;
                             }
                             catch (InvalidId ex)
@@ -79,12 +83,13 @@ namespace BankApp.CLI2
 
                             catch (InvalidPin ex)
                             { Console.WriteLine(ex.Message); break; }
-
-                            catch
+                            catch (InvalidBankId ex)
+                            { Console.WriteLine(ex.Message); break; }
+                            catch (NotEnoughBalance ex)
                             {
-                                Console.WriteLine("Enter Valid Details");
-                                break;
+                                Console.WriteLine(ex.Message); break;
                             }
+                            
                         }
                     case HoldersOptions.TranferFunds:
                         {
@@ -105,6 +110,7 @@ namespace BankApp.CLI2
                                 string receiverId = Console.ReadLine();
                                 TransactionService transactionService = (TransactionService)Enum.Parse(typeof(TransactionService), Console.ReadLine());
                                 AccountService.Transfer(id, receiverId, pin, amount, rbankId,bankId,transactionService);
+                                Console.WriteLine("Successfully Transferred");
                                 break;
                             }
                             catch (InvalidId ex)
@@ -129,8 +135,8 @@ namespace BankApp.CLI2
                         }
                     case HoldersOptions.ViewTransactionHistory:
                         {
-                            try
-                            {
+                            //try
+                            //{
                                 string id;
                                 string bankId;
                                 string pin;
@@ -143,12 +149,12 @@ namespace BankApp.CLI2
 
 
                                 break;
-                            }
-                            catch
+                            //}
+                            /*catch
                             {
                                 Console.WriteLine("Enter Valid Details");
                                 break;
-                            }
+                            }*/
                         }
                     case HoldersOptions.Exit:
                         {

@@ -11,20 +11,28 @@ namespace BankApp.Models
 {
     public class Currency
     {
-        string url = "http://www.floatrates.com/daily/";
+        string url = "http://www.floatrates.com/daily/inr.json";
         public float exchangeRate;
         public string name { get; set; }
         public string currencyCode { get; set; }
-        public Currency(string name ,string code)
+        public Currency(string name, string code)
         {
-            url = url + code + "json";
             
-            string json = new WebClient().DownloadString(url);
-            var currency = JsonConvert.DeserializeObject<dynamic>(json);
-            exchangeRate = Convert.ToSingle(currency.inr.rate);
+            if (String.Equals(code, "inr"))
+            { exchangeRate = 1; }
+            else
+            {
+                url = url + code + ".json";
+
+                string json = new WebClient().DownloadString(url);
+                var currency = JsonConvert.DeserializeObject<dynamic>(json);
+                exchangeRate = Convert.ToSingle(currency.inr.rate);
+            }
+            Console.WriteLine(exchangeRate);
             currencyCode = code;
-             //Excbage rate With Respect to INR
+             //Exchage rate With Respect to INR
              
         }
+
     }
 }

@@ -7,58 +7,73 @@ using BankApp.Models;
 namespace BankApp.Services
 {
      public static class BankService
-       { 
-       internal static List<Bank> banks;
+       {
+        //#pragma warning disable 0649
+        internal static  List<Bank> banks= new List<Bank>();
         
+        //#pragma warning restore 0649
         public static string CreateBank(string name)
         {
-            Bank bank = new Bank
+            Bank bank = new Bank()
             {
                 id = GenerateRandomId(name),
-                name = name
+                name = name,
+                staff= new List<BankStaff>(),
+                currencies = new List<Currency>(),
+                accounts = new List<Account>(),
+                imps = new IMPS(),
+                rtgs = new RTGS()
+
             };
-            if (BankExists(bank.id))
-            {
-                
-            }
+            
             if (!BankExists(bank.id))
             {
+                
                 banks.Add(bank);
             }
             else
             {
                 throw new BankAlreadyExists();
             }
+            
             return bank.id;
         }
     internal static bool BankExists(string id)
         {
             try
             {
-                Bank bank = banks.First(m => String.Equals(m.id, id));
+                Bank bank = banks.Single(m => String.Equals(m.id, id));
                 return true;
             }
             catch(InvalidOperationException)
             {
                 return false;
             }
+            catch(System.ArgumentNullException)
+            {
+                return false;
+            }
         }
     public static string GenerateRandomId(string name)
     {
+            name = name.ToUpper();
         string id = name.Substring(0,3);
-            string date = DateTime.Now.ToString("ddMMyyyy");
+            string date = DateTime.Now.ToString("ddMMyyyyHHmmss");
             id = id + date;
         return id;
     }
 
         public static Bank FindBank(string bankId)
         {
+            
             try
             {
                 return BankService.banks.Single(m => m.id == bankId);
             }
             catch
             {
+                
+                
                 throw new InvalidBankId();
             }
         }
@@ -76,17 +91,20 @@ namespace BankApp.Services
         public static void AddCurrency(string _name,string _code, string bankId)
         {
 
-            Currency currency = new Currency(_name, _code);
+            
+                Currency currency = new Currency(_name.ToLower(), _code);
 
-            Bank bank = FindBank(bankId);
-            bank.currencies.Add(currency);
+                Bank bank = FindBank(bankId);
+                bank.currencies.Add(currency);
+            
+           
 
         }
 
         public static void UpdateSameAccountCharges(float _impsCharge, float _rtgsCharge,string bankId)
         {
-            Bank bank = new Bank();
-            bank= FindBank(bankId);
+           
+            Bank bank= FindBank(bankId);
             bank.imps.sameAccountCharge = _impsCharge;
             bank.rtgs.sameAccountCharge = _rtgsCharge;
         }
@@ -110,22 +128,43 @@ namespace BankApp.Services
                 throw new InvalidId();
             }
         }
-        public static Account getAccount(string _bankId,string _accountId)
+        public static string AddStaff (string _bankId,string _name,string _password,Genders _gender)
         {
-            Bank bank = new Bank();
-            bank = FindBank(_bankId);
-            Account account = new Account();
-            account = FindAccount(bank, _accountId);
-            return account;
+            BankStaff staff = new BankStaff()
+            {
+                staffName = _name.ToUpper(),
+                password = _password,
+                gender = _gender
+            };
+            staff.staffId = _bankId+staff.staffName.Substring(0,3)+ DateTime.Now.ToString("ddMMyyyy"); ;
+            Bank bank = FindBank(_bankId);
+            foreach(BankStaff i in bank.staff)
+            {
+                Console.WriteLine(i.staffId);
+            }
+            bank.staff.Add(staff);
+
+            Console.WriteLine();
+
+            foreach (BankStaff i in bank.staff)
+            {
+                Console.WriteLine(i.staffId);
+            }
+            return staff.staffId;
+
         }
 
         public static bool AuthenticateBankStaff(string bankId, string staffId,string password)
         {
+            
             Bank bank = FindBank(bankId);
-            try
-            {
+            try { 
+                foreach( BankStaff i in bank.staff)
+                {
+                Console.WriteLine(i.staffId);
+                }
                 BankStaff staff = bank.staff.Single(m => m.staffId == staffId);
-                if(String.Equals(staffId,staff.staffId))
+                if(String.Equals(staff.password,password))
                 {
                     return true;
                 }
@@ -138,7 +177,8 @@ namespace BankApp.Services
             {
                 throw new InvalidStaff();
             }
-            
+
+
         }
 
         public static void RevertTransaction(string transactionId)

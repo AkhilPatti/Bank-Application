@@ -27,7 +27,7 @@ namespace BankApp.Services
             { accountId = BankService.GenerateRandomId(Name),
                 pin = newPin,
                 phoneNumber = Number,
-
+                transactions = new List<Transaction>()
             };
             if (!AccountExists(account.accountId, bank))
             {
@@ -91,27 +91,33 @@ namespace BankApp.Services
 
 
         }
-        public static void Deposit(float amount, string id, string pin, string bankId,string currencyCode)
+        public static float Deposit(float amount, string id, string pin, string bankId,string currencyCode)
         {
 
             Bank bank = FindBank(bankId);
             Account account = FindAccount(id, bank);
-            amount = amount * ConvertToRupees(currencyCode, amount, bank);
+            amount = ConvertToRupees(currencyCode, amount, bank);
             if (AccountValidator(id, pin, account))
             {
                 account.balance += amount;
                 UpdateTransaction(account, "", id, amount, TransactionType.Debit, bankId,"");
                 
             }
+            else
+            {
+                throw new InvalidPin();
+            }
+            return account.balance;
 
         }
         public static float ConvertToRupees(string currencyCode, float amount,Bank bank)
         {
-            Currency currency = bank.currencies.Single(m=>m.currencyCode==currencyCode);
+            Currency currency = bank.currencies.Single(m=>String.Equals(m.currencyCode,currencyCode));
             float newAmount = amount * currency.exchangeRate;
+            Console.WriteLine(currency.exchangeRate);
             return newAmount;
         }
-        public static void WithDraw(int amount, string id, string pin, string bankId)
+        public static  float WithDraw(float amount, string id, string pin, string bankId)
         {
             Bank bank = FindBank(bankId);
             Account account = FindAccount(id,bank);
@@ -127,23 +133,29 @@ namespace BankApp.Services
                     UpdateTransaction(account, "", id, amount, TransactionType.Credit, bankId,"");
                 }
             }
+            else
+            {
+                throw new InvalidPin();
+            }
+            return account.balance;
 
         }
         public static void Transfer(string senderId, string receiverId, string senderPin, float amount, string rbankId, string sbankId,TransactionService transactionService)
         {
-            Bank bank = FindBank(rbankId);
-            Account account = FindAccount(senderId,bank);
+            Bank rbank = FindBank(rbankId);
+            Bank sbank = FindBank(sbankId);
+            Account account = FindAccount(senderId,sbank);
             if (AccountValidator(senderId, senderPin, account))
             {
-                if (AccountExists(receiverId, bank))
+                if (AccountExists(receiverId, rbank))
                 {
-                    Account Raccount = bank.accounts.First(m => String.Equals(m.accountId, receiverId));
+                    Account Raccount = rbank.accounts.First(m => String.Equals(m.accountId, receiverId));
                     
                     //updating Sender's tranaction History
                     UpdateTransaction(Raccount, senderId, receiverId, amount, TransactionType.Debit, sbankId,rbankId);
 
-                    Account Saccount = bank.accounts.First(m => String.Equals(m.accountId, senderId));
-                    float charge = Calculatecharge(amount, bank, sbankId, transactionService);
+                    Account Saccount = sbank.accounts.First(m => String.Equals(m.accountId, senderId));
+                    float charge = Calculatecharge(amount, sbank, sbankId, transactionService);
                     Raccount.balance += amount;
                     Saccount.balance -= (amount+charge);
                     

@@ -4,12 +4,13 @@ using BankApp.Models.Exceptions;
 using System.Collections.Generic;
 using BankApp.Models;
 
-namespace BankAppCLI2
+namespace BankApp.CLI2
 {
     public enum UserType
     {
         AccountHolder=1,
         BankStaff,
+        CreateBank,
         Exit
     };
     class Program
@@ -17,17 +18,17 @@ namespace BankAppCLI2
         static void Main(string[] args)
         {
 
-
+            
             bool TryAgain = true;
             while (TryAgain)
             {
-                Choice.display();
+                Choice.Display();
                 UserType userOption = (UserType)Enum.Parse(typeof(UserType), Console.ReadLine());
                 switch (userOption)
                 {
                     case UserType.AccountHolder:
                         {
-                            AccountHolderPage accountHolderPage = new AccountHolderPage();
+                            AccountHoldersPage accountHolderPage = new AccountHoldersPage();
                             accountHolderPage.Display();
                             TryAgain = false;
                             break;
@@ -40,23 +41,52 @@ namespace BankAppCLI2
                             string staffId=Console.ReadLine();
                             Console.WriteLine("Enter the password");
                             string password = Console.ReadLine();
-                            if(BankService.AuthenticateBankStaff(bankId, staffId, password))
+                            try
                             {
-                                string _bankId = bankId;
-                                StaffPage staff = new StaffPage
+                                if (BankService.AuthenticateBankStaff(bankId, staffId, password))
                                 {
-                                    bankId = _bankId
-                                };
-                                staff.Display();
+                                    string _bankId = bankId;
+                                    StaffPage staff = new StaffPage(bankId)
+                                    {
+                                        bankId = _bankId
+                                    };
+                                    staff.Display();
+                                }
                             }
-                            TryAgain = false;
+                            catch(InvalidBankId)
+                            {
+                                Console.WriteLine("Please Enter Valid BankId");
+                            }
+                            catch(InvalidStaff)
+                            {
+                                Console.WriteLine("Please Enter Valid StaffId");
+                            }
+                            
                             break;
 
+                        }
+                    case UserType.CreateBank:
+                        {
+                            Console.WriteLine("Enter the name of the bank");
+                            string bankName=Console.ReadLine();
+
+                            try { 
+                                string bankId = BankService.CreateBank(bankName);
+                                Console.WriteLine("Your bank Id is {}", bankId);
+                            }
+                            catch (BankAlreadyExists)
+                            {
+                                Console.WriteLine("Bank with the above name name Akready exists");
+                            }
+
+
+                            
+                            break;
                         }
                     case UserType.Exit:
                         {
                             TryAgain = false;
-                            Console.WriteLine("THank you");
+                            Console.WriteLine("Thank you");
                             break;
                         }
                     default:

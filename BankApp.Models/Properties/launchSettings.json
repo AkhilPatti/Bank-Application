@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "BankApp.Models": {
+      "commandName": "Project"
+    },
+    "BankApp.CLI": {
+      "commandName": "Executable",
+      "sqlDebugging": true,
+      "nativeDebugging": true
+    }
+  }
+}

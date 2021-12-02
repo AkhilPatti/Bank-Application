@@ -13,10 +13,9 @@ namespace BankApp.Models
         public string name { get; set; }
         public List<Account> accounts { get; set; }
         public List<Currency> currencies { get; set; }
-        public DateTime createdOn { get; set; }
-        public string createdBy { get; set; }
+        /*public DateTime createdOn { get; set; }
         public DateTime updatedOn {get;set;}
-        public string updatedBy { get; set; }
+        public string updatedBy { get; set; }*/
         public IMPS imps { get; set; }
 
         public RTGS rtgs { get; set; }
