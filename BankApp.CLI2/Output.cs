@@ -9,38 +9,32 @@ namespace BankApp.CLI2
 {
     public static class Output
     {
-        public static void PrintTransactionHistory(string id, string bankId,string pin)
-        {
-
-            Bank bank = BankService.FindBank(bankId);
-            Account account = AccountService.FindAccount(id, bank);
-            List<Transaction>  transList = account.transactions;
-            if (AccountService.AccountValidator(id, pin, account))
+        public static void PrintTransactionHistory(AccountService accountService ,string id ,string pin)
+        { 
+            if (accountService.AccountValidator(id, pin))
             {
-                foreach (Transaction items in transList)
+                List<(float amount, string sourceId, string receiverId,int type,DateTime dateTime)>transList = accountService.GetTransaction(id);
+                
+                foreach ((float ,string,string,int,DateTime)items in transList)
                 {
-                    if (items.type == TransactionType.Credit)
+                    if (items.Item4 == (int)TransactionType.WithDrawl)
                     {
-                        if (string.IsNullOrEmpty(items.accountId))
+                        if (string.IsNullOrEmpty(items.Item2))
                         {
-                            Console.WriteLine("{} amount is withdrawn on ", items.amount, items.on);
+                            Console.WriteLine("{0} amount is withdrawn on {1}", items.Item1, items.Item5.ToString("ddMMyyyyyHHmmss"));
                         }
-                        else
-                        {
-                            Console.WriteLine("{} amount is debbited into {} account from {} On {items.Item4}", items.amount, items.sourceAccountId, items.accountId);
-                        }
+                    }
+                    else if (items.Item4 == (int)TransactionType.Transfer)
+                    {
+                        Console.WriteLine("{0} amount is debbited into {1} account from {2} On {3}", items.Item1, items.Item2, items.Item3, items.Item5);
                     }
                     else
                     {
-                        if (string.IsNullOrEmpty(items.sourceAccountId))
+                        if (string.IsNullOrEmpty(items.Item2))
                         {
-                            Console.WriteLine("{0} amount is deposited  on {1}", items.amount, items.on.ToString("D HH:mm"));
+                            Console.WriteLine("{0} amount is deposited  on {1}", items.Item1, items.Item5.ToString("D HH:mm"));
                         }
-                        else
-                        {
-
-                            Console.WriteLine("{0} amount is debitted from {1} account to {2} On {3}", items.amount, items.accountId, items.sourceAccountId, items.on.ToString("D HH:mm"));
-                        }
+                        
                     }
                 }
             }
@@ -51,47 +45,38 @@ namespace BankApp.CLI2
         }
 
 
-        public static void PrintTransactionHistory(string id, string bankId)
+        public static void PrintTransactionHistory(BankService bankService,string id)
         {
-            try
-            {
+         
 
-                Bank bank = BankService.FindBank(bankId);
-                Account account = AccountService.FindAccount(id, bank);
-                List<Transaction> transList = account.transactions;
-        
-                foreach (Transaction items in transList)
+                List<(float amount, string sourceId, string receiverId, int type, DateTime dateTime)> transList = bankService.GetTransaction(id);
+
+                foreach ((float, string, string, int, DateTime) items in transList)
                 {
-                    if (items.type == TransactionType.Credit)
+                    if (items.Item4 == (int)TransactionType.WithDrawl)
                     {
-                        if (string.IsNullOrEmpty(items.accountId))
+                        if (string.IsNullOrEmpty(items.Item2))
                         {
-                            Console.WriteLine("{} amount is withdrawn on ", items.amount, items.on);
+                            Console.WriteLine("{0} amount is withdrawn on {1}", items.Item1, items.Item5.ToString("ddMMyyyyyHHmmss"));
                         }
-                        else
-                        {
-                            Console.WriteLine("{} amount is debbited into {} account from {} On {items.Item4}", items.amount, items.sourceAccountId, items.accountId);
-                        }
+                    }
+                    else if (items.Item4 == (int)TransactionType.Transfer)
+                    {
+                        Console.WriteLine("{0} amount is debbited into {1} account from {2} On {items.Item5}", items.Item1, items.Item2, items.Item3);
                     }
                     else
                     {
-                        if (string.IsNullOrEmpty(items.sourceAccountId))
+                        if (string.IsNullOrEmpty(items.Item2))
                         {
-                            Console.WriteLine("{} amount is deposited  on ", items.amount, items.on);
+                            Console.WriteLine("{0} amount is deposited  on {1}", items.Item1, items.Item5.ToString("D HH:mm"));
                         }
-                        else
-                        {
-                            Console.WriteLine("{} amount is debitted from {} account to {} On {}", items.amount, items.accountId, items.sourceAccountId, items.on);
-                        }
+
                     }
                 }
             }
-            catch
-            {
-                Console.WriteLine("Enter Valid Details");
-            }
-
 
         }
+
+        
     }
-}
+

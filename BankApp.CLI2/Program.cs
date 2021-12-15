@@ -17,8 +17,8 @@ namespace BankApp.CLI2
     {
         static void Main(string[] args)
         {
+            BankService bankService = new BankService();
 
-            
             bool TryAgain = true;
             while (TryAgain)
             {
@@ -43,16 +43,23 @@ namespace BankApp.CLI2
                             string password = Console.ReadLine();
                             try
                             {
-                                if (BankService.AuthenticateBankStaff(bankId, staffId, password))
+
+                            if (bankService.AuthenticateBankStaff(staffId, password))
+                            {
+                                Console.WriteLine("Correct pass");
+                                string _bankId = bankId;
+                                    StaffPage staff = new StaffPage(bankService,_bankId);
                                 {
-                                    string _bankId = bankId;
-                                    StaffPage staff = new StaffPage(bankId)
-                                    {
-                                        bankId = _bankId
-                                    };
-                                    staff.Display();
+                                        bankId = _bankId;
                                 }
+                                staff.Display();
                             }
+                            else
+                            {
+                                Console.WriteLine("Invalid Details");
+                            }
+                            
+                        }
                             catch(InvalidBankId)
                             {
                                 Console.WriteLine("Please Enter Valid BankId");
@@ -70,8 +77,9 @@ namespace BankApp.CLI2
                             Console.WriteLine("Enter the name of the bank");
                             string bankName=Console.ReadLine();
 
+
                             try { 
-                                string bankId = BankService.CreateBank(bankName);
+                                string bankId = bankService.CreateBank(bankName);
                                 Console.WriteLine("Your bank Id is {}", bankId);
                             }
                             catch (BankAlreadyExists)

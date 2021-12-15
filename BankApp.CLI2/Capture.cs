@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BankApp.Models;
 using BankApp.Models.Exceptions;
+using BankApp.Services;
 namespace BankApp.CLI2
 {
     public static class Capture
@@ -39,23 +40,27 @@ namespace BankApp.CLI2
             int amount = Convert.ToInt32(Console.ReadLine());
             return amount;
         }
-        public static string  CaptureCurrency(Bank bank)
+        public static string  CaptureCurrency(AccountService accountService,string bankId)
         {
             Console.WriteLine("Choose code of the currencies Available");
-            foreach(Currency currency in bank.currencies)
+            List<string> currencyCodes = accountService.GetCurrencies(bankId);
+            foreach(string code in currencyCodes)
             {
-                Console.WriteLine(currency.currencyCode);
+                Console.WriteLine(code);
             }
+            Console.WriteLine("Enter Currency Codes");
             string currencyCode=Console.ReadLine();
             try
             {
-                Currency currency = bank.currencies.Single(m => m.currencyCode == currencyCode);
+                if (!accountService.CheckCurrencyExist(bankId, currencyCode))
+                    throw new InvalidCurrencyCode();
+                return currencyCode;
             }
             catch
             {
                 throw new InvalidCurrencyCode();
             }
-            return currencyCode;
+            
 
         }
     }

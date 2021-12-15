@@ -20,9 +20,15 @@ namespace BankApp.CLI2
     public class StaffPage
     {
         public string bankId { get; set; }
-        public StaffPage(String _bankId)
+        public BankService bankService;
+        AccountService accountService;
+        public StaffPage(BankService _bankService,string _bankId)
         {
             bankId = _bankId;
+            bankService = _bankService;
+            accountService = new AccountService();
+            accountService.StartService();
+
         }
 
 
@@ -40,8 +46,8 @@ namespace BankApp.CLI2
                 {
                     case StaffOptions.CreateAccount:
                         {
-                            try
-                            {
+                            /*try
+                            {*/
                                 Console.WriteLine("Enter Your Name");
                                 string name = Console.ReadLine();
                                 Console.WriteLine("Enter the pin you want to set");
@@ -49,16 +55,16 @@ namespace BankApp.CLI2
                                 Console.WriteLine("Enter the Phone Number");
                                 string phoneNo = Console.ReadLine();
                                 
-                                string id = AccountService.CreateAccount(name, pin, phoneNo, bankId);
+                                string id = accountService.CreateAccount(name, pin,phoneNo, bankId);
+                                Console.WriteLine("ID is {0}",id);
                                 Console.WriteLine("Your Account id is {0} with BankId as {1}", id, bankId);
                                 
-                            }
+                            //}
 
-                            catch
+                            /*catch
                             {
                                 Console.WriteLine("Enter Valid Details");
-                                throw;
-                            }
+                            }*/
                             break;
                         }
                     case StaffOptions.DeleteAccount:
@@ -67,9 +73,9 @@ namespace BankApp.CLI2
                             {
                                 Console.WriteLine("Enter the Id of the Account you Want to Delete");
                                 string accountId = Console.ReadLine();
-                                Bank bank = BankService.FindBank(bankId);
-                                Account account = AccountService.FindAccount(accountId, bank);
-                                bank.accounts.Remove(account);
+
+                                bankService.DeleteAccount(accountId);
+
                                 Console.WriteLine("Account Deleted Successfully");
                             }
                             catch(InvalidId)
@@ -87,7 +93,7 @@ namespace BankApp.CLI2
                                 Console.WriteLine("Enter its currency code ");
                                 string code = Console.ReadLine();
                                 code = code.ToLower();
-                                BankService.AddCurrency(name, code, bankId);
+                                bankService.AddCurrency(name, code, bankId);
                             }
                             catch( InvalidCurrencyCode)
                             {
@@ -101,7 +107,7 @@ namespace BankApp.CLI2
                             float chargeImps = Convert.ToSingle(Console.ReadLine());
                             Console.WriteLine("Enter the new Updated RTGS Chagrges");
                             float chargeRtgs = Convert.ToSingle(Console.ReadLine());
-                            BankService.UpdateOtherAccountCharges(chargeImps, chargeRtgs, bankId);
+                            bankService.UpdateOtherAccountCharges(chargeImps, chargeRtgs, bankId);
 
                             break;
                         }
@@ -111,7 +117,7 @@ namespace BankApp.CLI2
                             float chargeImps = Convert.ToSingle(Console.ReadLine());
                             Console.WriteLine("Enter the new Updated RTGS Chagrges");
                             float chargeRtgs = Convert.ToSingle(Console.ReadLine());
-                            BankService.UpdateSameAccountCharges(chargeImps, chargeRtgs, bankId);
+                            bankService.UpdateSameAccountCharges(chargeImps, chargeRtgs, bankId);
 
                             break;
                         }
@@ -122,7 +128,7 @@ namespace BankApp.CLI2
                             {
                                 Console.WriteLine("Enter AccontId");
                                 string accountId = Console.ReadLine();
-                                Output.PrintTransactionHistory(accountId,bankId);
+                                Output.PrintTransactionHistory(bankService,accountId);
                             }
                             catch (InvalidId)
                             {
@@ -133,6 +139,20 @@ namespace BankApp.CLI2
                     case StaffOptions.Exit:
                         {
                             tryAgain = false;
+                            break;
+                        }
+                    case StaffOptions.RevertTranaction:
+                        {
+                            Console.WriteLine("Enter a Valid TransactionId");
+                            string transactionId = Console.ReadLine();
+                            try
+                            {
+                                bankService.RevertTransaction(transactionId);
+                            }
+                            catch
+                            {
+                                Console.WriteLine("Enter a valid Transaction ID");
+                            }
                             break;
                         }
                     default:

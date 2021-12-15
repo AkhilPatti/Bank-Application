@@ -6,50 +6,38 @@ using BankApp.Models;
 
 namespace BankApp.Services
 {
-     public static class BankService
+     public class BankService
        {
         //#pragma warning disable 0649
-        internal static  List<Bank> banks= new List<Bank>();
-        
-        //#pragma warning restore 0649
-        public static string CreateBank(string name)
-        {
-            Bank bank = new Bank()
-            {
-                id = GenerateRandomId(name),
-                name = name,
-                staff= new List<BankStaff>(),
-                currencies = new List<Currency>(),
-                accounts = new List<Account>(),
-                imps = new IMPS(),
-                rtgs = new RTGS()
-
-            };
-            
-            if (!BankExists(bank.id))
-            {
-                
-                banks.Add(bank);
-            }
-            else
-            {
-                throw new BankAlreadyExists();
-            }
-            
-            return bank.id;
+        private SqlHandler sqlHandler;
+        public BankService() 
+        { 
+            sqlHandler = new SqlHandler ();
+            sqlHandler.StartConnection();
+           
         }
-    internal static bool BankExists(string id)
+        
+        public string CreateBank(string name)
+        {
+            string bankId = sqlHandler.AddBank(name);
+            
+            return bankId;
+        }
+    internal bool BankExists(string id)
         {
             try
             {
-                Bank bank = banks.Single(m => String.Equals(m.id, id));
-                return true;
+                if(sqlHandler.CheckBankExists(id))
+                    {
+                    return true;
+
+                }
+                else
+                {
+                    return false;
+                }
             }
-            catch(InvalidOperationException)
-            {
-                return false;
-            }
-            catch(System.ArgumentNullException)
+            catch
             {
                 return false;
             }
@@ -63,7 +51,7 @@ namespace BankApp.Services
         return id;
     }
 
-        public static Bank FindBank(string bankId)
+        /*public static Bank FindBank(string bankId)
         {
             
             try
@@ -76,45 +64,39 @@ namespace BankApp.Services
                 
                 throw new InvalidBankId();
             }
-        }
+        }*/
 
-        public static void DeleteAccount(string bankId,string accountId)
+        public bool DeleteAccount(string accountId)
         {
-            Bank bank = FindBank(bankId);
-            Account account = FindAccount(bank, accountId);
-            if (!bank.accounts.Remove(account))
+            if (sqlHandler.CheckUserExists(accountId))
             {
                 throw new AccountNotFound();
             }
+            return sqlHandler.DeleteUser(accountId);
         }
 
-        public static void AddCurrency(string _name,string _code, string bankId)
+        public float AddCurrency(string _name,string _code, string bankId)
         {
 
+
+            float ExchangeRate= sqlHandler.AddAcceptedCurrency(_code, bankId);
+
+            return ExchangeRate;
+        }
+
+        public  void UpdateSameAccountCharges(float _impsCharge, float _rtgsCharge,string bankId)
+        {
+
+            sqlHandler.UpdatesIMPS(_impsCharge, bankId);
             
-                Currency currency = new Currency(_name.ToLower(), _code);
-
-                Bank bank = FindBank(bankId);
-                bank.currencies.Add(currency);
+            sqlHandler.UpdatesRTGS(_rtgsCharge, bankId);
             
-           
-
         }
 
-        public static void UpdateSameAccountCharges(float _impsCharge, float _rtgsCharge,string bankId)
+        public void UpdateOtherAccountCharges(float _impsCharge, float _rtgsCharge, string bankId)
         {
-           
-            Bank bank= FindBank(bankId);
-            bank.imps.sameAccountCharge = _impsCharge;
-            bank.rtgs.sameAccountCharge = _rtgsCharge;
-        }
-
-        public static void UpdateOtherAccountCharges(float _impsCharge, float _rtgsCharge, string bankId)
-        {
-            Bank bank = new Bank();
-            bank = FindBank(bankId);
-            bank.imps.otherAccountCharge = _impsCharge;
-            bank.rtgs.otherAccountcharge = _rtgsCharge;
+            sqlHandler.UpdateoIMPS(_impsCharge, bankId);
+            sqlHandler.UpdateoRTGS(_rtgsCharge, bankId);
         }
 
         public static Account FindAccount(Bank bank,string _accountId)
@@ -128,88 +110,28 @@ namespace BankApp.Services
                 throw new InvalidId();
             }
         }
-        public static string AddStaff (string _bankId,string _name,string _password,Genders _gender)
+        public string AddStaff (string _bankId,string _name,string _password,Genders _gender)
         {
-            BankStaff staff = new BankStaff()
-            {
-                staffName = _name.ToUpper(),
-                password = _password,
-                gender = _gender
-            };
-            staff.staffId = _bankId+staff.staffName.Substring(0,3)+ DateTime.Now.ToString("ddMMyyyy"); ;
-            Bank bank = FindBank(_bankId);
-            foreach(BankStaff i in bank.staff)
-            {
-                Console.WriteLine(i.staffId);
-            }
-            bank.staff.Add(staff);
-
-            Console.WriteLine();
-
-            foreach (BankStaff i in bank.staff)
-            {
-                Console.WriteLine(i.staffId);
-            }
-            return staff.staffId;
+            string staffId = sqlHandler.AddStaff(_name, _password, _bankId);
+            return staffId;
 
         }
 
-        public static bool AuthenticateBankStaff(string bankId, string staffId,string password)
+        public bool AuthenticateBankStaff(string staffId,string password)
         {
             
-            Bank bank = FindBank(bankId);
-            try { 
-                foreach( BankStaff i in bank.staff)
-                {
-                Console.WriteLine(i.staffId);
-                }
-                BankStaff staff = bank.staff.Single(m => m.staffId == staffId);
-                if(String.Equals(staff.password,password))
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            catch
-            {
-                throw new InvalidStaff();
-            }
-
+            return sqlHandler.AuthenticateStaff(staffId, password);
 
         }
 
-        public static void RevertTransaction(string transactionId)
+        public bool RevertTransaction(string transactionId)
         {
-            string bankId = transactionId.Substring(3, 14);
-            string accountId = transactionId.Substring(15, 26);
-            Bank bank = FindBank(bankId);
-            Account account = FindAccount(bank,accountId);
-            Transaction transaction = account.transactions.Single(m => m.tranactionId == transactionId);
-            float amount = transaction.amount;
-            TransactionType transactiontype = transaction.type;
-            if(String.Equals(transaction.accountId,""))
-            {
-                if(transaction.type==TransactionType.Debit)
-                account.balance += amount;
-                else
-                {
-                    account.balance -= amount;
-                }
-            }
-            else
-            {
-                string rBankId = transaction.recieverBankId;
-                string rAccountId = transaction.accountId;
-                Bank rBank = FindBank(rBankId);
-                Account rAccount = FindAccount(rBank,rAccountId);
-                rAccount.balance -= amount;
-                account.balance += amount;
+            return sqlHandler.RevertTransaction(transactionId);
 
-            }
-
+        }
+       public List<(float amount, string sourceId, string recieverId,int type ,DateTime dateTime)> GetTransaction(string accountId)
+        {
+            return sqlHandler.GetTransaction(accountId);
         }
     }
 }
