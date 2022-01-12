@@ -58,11 +58,11 @@ namespace BankApp.CLI2
                                 Console.WriteLine(ex.Message);
                                 
                             }
-                            catch
+                            /*catch
                             {
                                 Console.WriteLine("Enter Valid Details");
                                 
-                            }
+                            }*/
                             break;
                         }
                     case HoldersOptions.WithdrawAmount:

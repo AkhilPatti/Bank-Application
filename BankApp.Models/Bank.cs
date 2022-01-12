@@ -3,22 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 namespace BankApp.Models
 {
+    [Table("Banks",Schema ="bankdatabase")]
     public class  Bank
     {
-        
-        public string  id { get; set; }
-        public string name { get; set; }
-        public List<Account> accounts { get; set; }
-        public List<Currency> currencies { get; set; }
-        /*public DateTime createdOn { get; set; }
-        public DateTime updatedOn {get;set;}
-        public string updatedBy { get; set; }*/
-        public IMPS imps { get; set; }
-
-        public RTGS rtgs { get; set; }
-        public List<BankStaff> staff { get; set; }
+        [Key]
+        [Required]
+        [MaxLength(12)]
+        [Column("BankId")]
+        public string  bankId { get; set; }
+        [Column("BankName")]
+        [MaxLength(25)]
+        [Required]
+        public string bankName { get; set; }
+        [Column("sImps")]
+        [Required]
+        public double sImps { get; set; }
+        [Column("oImps")]
+        [Required]
+        public double oImps { get; set; }
+        [Required]
+        [Column("sRtgs")]
+        public double sRtgs { get; set; }
+        [Required]
+        [Column("oRtgs")]
+        public double oRtgs { get; set; }
         }
     }

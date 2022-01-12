@@ -46,8 +46,8 @@ namespace BankApp.CLI2
                 {
                     case StaffOptions.CreateAccount:
                         {
-                            /*try
-                            {*/
+                            try
+                            {
                                 Console.WriteLine("Enter Your Name");
                                 string name = Console.ReadLine();
                                 Console.WriteLine("Enter the pin you want to set");
@@ -59,12 +59,12 @@ namespace BankApp.CLI2
                                 Console.WriteLine("ID is {0}",id);
                                 Console.WriteLine("Your Account id is {0} with BankId as {1}", id, bankId);
                                 
-                            //}
+                            }
 
-                            /*catch
+                            catch
                             {
                                 Console.WriteLine("Enter Valid Details");
-                            }*/
+                            }
                             break;
                         }
                     case StaffOptions.DeleteAccount:
@@ -93,7 +93,7 @@ namespace BankApp.CLI2
                                 Console.WriteLine("Enter its currency code ");
                                 string code = Console.ReadLine();
                                 code = code.ToLower();
-                                bankService.AddCurrency(name, code, bankId);
+                                bankService.AddCurrency(code, bankId);
                             }
                             catch( InvalidCurrencyCode)
                             {

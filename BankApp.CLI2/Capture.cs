@@ -15,13 +15,7 @@ namespace BankApp.CLI2
             return gender;
         }
 
-        public static AccountType CaptureStatus()
-        {
-            Console.WriteLine("1.Saving \n2.Salary account\n3.FixedDeposit\n4.RecurringDeposit\n5.NRI");
-
-            AccountType status = (AccountType)Enum.Parse(typeof(AccountType), Console.ReadLine());
-            return status;
-        }
+       
         public static Tuple<string, string,string> CaptureDetails()
         {
             string id;
