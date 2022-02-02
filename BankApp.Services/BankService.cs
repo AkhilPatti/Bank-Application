@@ -3,40 +3,45 @@ using System.Collections.Generic;
 using System.Linq;
 using BankApp.Models.Exceptions;
 using BankApp.Models;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.Extensions.Configuration;
 
 namespace BankApp.Services
 {
-     public class BankService
-       {
+    public class BankService : IBankService
+    {
         //#pragma warning disable 0649
-        private SqlHandler sqlHandler;
-        BankDbContext db;
-        public BankService() 
-        {
-            db = new BankDbContext();
-            sqlHandler = new SqlHandler ();
-            sqlHandler.StartConnection();
-           
-        }
         
+        BankDbContext db;
+        IConfiguration configuration;
+        public BankService(IConfiguration _configuration, BankDbContext _bankDbContext)
+        {
+            configuration = _configuration;
+            db = _bankDbContext;
+
+        }
+
+
         public string CreateBank(string name)
         {
-            
+
             Bank bank = new Bank()
             {
                 bankName = name,
                 sImps = 0,
                 sRtgs = 0,
                 oImps = 0,
-                
+
                 bankId = GenerateRandomId(name),
                 oRtgs = 0
             };
-            db.Banks.Add(bank) ;
-            
+            db.Banks.Add(bank);
+
             return bank.bankId;
         }
-    internal bool BankExists(string id)
+        internal bool BankExists(string id)
         {
             try
             {
@@ -48,14 +53,14 @@ namespace BankApp.Services
                 return false;
             }
         }
-    public  string GenerateRandomId(string name)
-    {
+        public string GenerateRandomId(string name)
+        {
             name = name.ToUpper();
-        string id = name.Substring(0,3);
+            string id = name.Substring(0, 3);
             string date = DateTime.Now.ToString("ddMMyyyyHHmmss");
             id = id + date;
-        return id;
-    }
+            return id;
+        }
 
         public Bank FindBank(string bankId)
         {
@@ -70,6 +75,21 @@ namespace BankApp.Services
 
                 throw new InvalidBankId();
             }
+        }
+        public string CreateAccount(string name, string pin, string phoneNo, string bankId)
+        {
+            string accountId = name.Substring(0, 3) + bankId.Substring(0, 3) + DateTime.Now.ToString("ddMMyyyyyHHmmss");
+            db.Add(new Account
+            {
+                accountHolderName = name,
+                pinHash = pin,
+                phoneNumber = phoneNo,
+                balance = 0,
+                bankId = bankId,
+                accountId = accountId,
+            });
+            db.SaveChanges();
+            return accountId;
         }
 
         public bool DeleteAccount(string accountId)
@@ -95,7 +115,7 @@ namespace BankApp.Services
                 var currency = db.Currencies.Single(m => m.currencyCode == currencyCode);
                 float exchangeRate = (float)currency.exchangeRate;
                 db.BankCurrencies.Add(new BankCurrencies
-                    {
+                {
                     bankId = bankId,
                     currerncyCode = currencyCode
                 });
@@ -108,7 +128,7 @@ namespace BankApp.Services
             }
         }
 
-        public  void UpdateSameAccountCharges(float _impsCharge, float _rtgsCharge,string bankId)
+        public void UpdateSameAccountCharges(float _impsCharge, float _rtgsCharge, string bankId)
         {
             Bank bank = FindBank(bankId);
             bank.sImps = _impsCharge;
@@ -129,7 +149,8 @@ namespace BankApp.Services
         public Account FindAccount(string _accountId)
         {
             try
-            { Account account = db.Accounts.Single(m => m.accountId == _accountId);
+            {
+                Account account = db.Accounts.Single(m => m.accountId == _accountId);
                 return account;
             }
             catch
@@ -139,23 +160,46 @@ namespace BankApp.Services
         }
         public string AddStaff(string bankId, string name, string password, Genders gender)
         {
-            BankStaff staff = new BankStaff()
+            BankStaff staff = new()
             {
                 staffName = name,
                 password = password,
                 bankId = bankId,
                 staffId = name.Substring(0, 3) + DateTime.Now.ToString("ddMMyyyyyHHmmss")
-        };
+            };
             db.Staff.Add(staff);
             return staff.staffId;
         }
 
+        public string CreateToken(Account account)
+        {
+            List<Claim> claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Role,"staff")
+            };
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration.GetSection("AppSettings:Token").Value));
+            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            var token = new JwtSecurityToken
+            (
+                claims: claims,
+                signingCredentials: cred,
+                expires: DateTime.Now.AddDays(1));
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+            return jwt;
+        }
+
         public bool AuthenticateBankStaff(string staffId, string password)
         {
-            try
-             {
-                var staff = db.Staff.Single(s => s.staffId == staffId);
-                if (String.Equals(staff.password, password))
+
+                var staff = db.Staff.SingleOrDefault(m => m.staffId == staffId);
+                if (staff == null)
+                {
+
+                    throw new InvalidStaff();
+
+                }
+
+                if (BCrypt.Net.BCrypt.Verify(password, staff.password))
                 {
                     return true;
                 }
@@ -163,12 +207,6 @@ namespace BankApp.Services
                 {
                     return false;
                 }
-            }
-            catch
-            {
-                throw new InvalidStaff();
-            }   
-
         }
 
         public bool RevertTransaction(string transactionId)
@@ -177,7 +215,7 @@ namespace BankApp.Services
             Transaction transaction;
             try
             {
-                transaction = db.Transactions.Single(m => m.tranactionId == transactionId);
+                transaction = db.Transactions.Single(m => m.transactionId == transactionId);
             }
             catch
             {
@@ -187,20 +225,20 @@ namespace BankApp.Services
             switch ((int)transaction.type)
             {
                 case 0:
+                    {
+                        try
                         {
-                            try
-                            {
-                                var account = FindAccount(transaction.sourceAccountId);
-                                account.balance += transaction.amount;
-                                db.Accounts.Update(account);
-                                db.SaveChanges();
-                                return true;
-                            }
-                            catch
-                            {
+                            var account = FindAccount(transaction.sourceAccountId);
+                            account.balance += transaction.amount;
+                            db.Accounts.Update(account);
+                            db.SaveChanges();
+                            return true;
+                        }
+                        catch
+                        {
                             throw new InvalidId();
-                            }
-                        
+                        }
+
                     }
                 case 2:
                     {
@@ -221,10 +259,11 @@ namespace BankApp.Services
                         {
                             throw new InvalidReceiver();
                         }
-                        
+
                     }
                 case 3:
-                    { Account saccount;
+                    {
+                        Account saccount;
                         try
                         {
                             saccount = FindAccount(transaction.sourceAccountId);
@@ -250,7 +289,7 @@ namespace BankApp.Services
             return true;
         }
 
-       public List<(float amount, string sourceId, string recieverId,int type ,DateTime dateTime)> GetTransaction(string accountId)
+        public List<(float amount, string sourceId, string recieverId, int type, DateTime dateTime)> GetTransaction(string accountId)
         {
             List<(float, string, string, int, DateTime)> transactions = new List<(float, string, string, int, DateTime)>();
             var transaction = db.Transactions.Where(m => (m.receiveraccountId == accountId || m.sourceAccountId == accountId && m.type == TransactionType.Transfer))
@@ -259,15 +298,15 @@ namespace BankApp.Services
                                     sourceAccountId = m.sourceAccountId ?? "",
                                     amount = m.amount,
                                     receiveraccountId = m.receiveraccountId ?? "",
-                                    type = m.type==TransactionType.Deposit ? 0 : m.type==TransactionType.Transfer ? 1: 2,
+                                    type = m.type == TransactionType.Deposit ? 0 : m.type == TransactionType.Transfer ? 1 : 2,
                                     on = m.on
                                 });
             foreach (var item in transaction)
             {
-                transactions.Add((item.amount,item.sourceAccountId, item.receiveraccountId, (int)item.type, item.on));
+                transactions.Add((item.amount, item.sourceAccountId, item.receiveraccountId, (int)item.type, item.on));
             }
             return transactions;
-            
+
         }
     }
 }

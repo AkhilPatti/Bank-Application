@@ -10,11 +10,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BankApp.Models
 {
-    [Table("currencies",Schema ="bankdatabase")]
+    [Table("currencies", Schema = "practice")]
     public class Currency
     {
         [Required]
         [Key]
+        [MaxLength(12)]
         [Column("CurrencyCode")]
         public string currencyCode { get; set; }
         [Required]
@@ -23,6 +24,7 @@ namespace BankApp.Models
         [Required]
         [Column("Name")]
         public string name { get; set; }
+        public ICollection<BankCurrencies> bankCurrencies{get;set;}
 
     }
 }

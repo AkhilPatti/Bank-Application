@@ -8,18 +8,21 @@ using System.Threading.Tasks;
 
 namespace BankApp.Models
 {
-    [Table("BankCurrencies",Schema ="bankdatabase")]
+    [Table("BankCurrencies",Schema ="practice")]
     public class BankCurrencies
     {
         [Required]
-        
+        [MaxLength(25)]
         [ForeignKey("Banks")]
         [Column("BankId")]
         public string bankId { get; set; }
+        public Bank bank { get; set; }
         [Required]
         
         [ForeignKey("Currencies")]
+        [MaxLength(25)]
         [Column("CurrencyCode")]
         public string currerncyCode { get; set; }
+        public Currency currency { get; set; }
     }
 }

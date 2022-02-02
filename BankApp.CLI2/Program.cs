@@ -1,5 +1,6 @@
 ﻿using System;
 using BankApp.Services;
+using System.Linq;
 using BankApp.Models.Exceptions;
 using System.Collections.Generic;
 using BankApp.Models;
@@ -17,8 +18,9 @@ namespace BankApp.CLI2
     {
         static void Main(string[] args)
         {
+           
             BankService bankService = new BankService();
-
+            
             bool TryAgain = true;
             while (TryAgain)
             {

@@ -7,14 +7,14 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 namespace BankApp.Models
 {
-    [Table("Banks",Schema ="bankdatabase")]
-    public class  Bank
+    [Table("Banks", Schema = "practice")]
+    public class Bank
     {
         [Key]
         [Required]
         [MaxLength(12)]
         [Column("BankId")]
-        public string  bankId { get; set; }
+        public string bankId { get; set; }
         [Column("BankName")]
         [MaxLength(25)]
         [Required]
@@ -31,5 +31,10 @@ namespace BankApp.Models
         [Required]
         [Column("oRtgs")]
         public double oRtgs { get; set; }
-        }
+
+        public ICollection<Account> accounts { get; set; }
+        public ICollection<BankStaff> bankStaff{get;set;}
+
+        public ICollection<BankCurrencies> bankCurrencies { get; set; }
+    }
     }

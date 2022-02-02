@@ -27,7 +27,7 @@ namespace BankApp.CLI2
             bankId = _bankId;
             bankService = _bankService;
             accountService = new AccountService();
-            accountService.StartService();
+            
 
         }
 
@@ -54,8 +54,9 @@ namespace BankApp.CLI2
                                 string pin = Console.ReadLine();
                                 Console.WriteLine("Enter the Phone Number");
                                 string phoneNo = Console.ReadLine();
-                                
-                                string id = accountService.CreateAccount(name, pin,phoneNo, bankId);
+
+                                //string id = accountService.CreateAccount(name, pin,phoneNo, bankId);
+                                string id= "sdasda";
                                 Console.WriteLine("ID is {0}",id);
                                 Console.WriteLine("Your Account id is {0} with BankId as {1}", id, bankId);
                                 

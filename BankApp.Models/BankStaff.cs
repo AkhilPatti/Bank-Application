@@ -8,15 +8,17 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BankApp.Models
 {
-    [Table("StaffAccounts",Schema ="bankdatabase")]
+    [Table("StaffAccounts",Schema ="practice")]
     public class BankStaff
     {
         [Required]
+        [MaxLength(25)]
         [Column("Name")]
         public string staffName { get; set; }
         [Required]
         [Column("StaffId")]
         [Key]
+        [MaxLength(25)]
         public string staffId { get; set; }
         [Required]
         [Column("Password")]
@@ -26,6 +28,8 @@ namespace BankApp.Models
         [Required]
         [Column("BankId")]
         [ForeignKey("Bank")]
+        [MaxLength(25)]
         public string bankId { get; set; }
+        public Bank bank { get; set; }
     }
 }

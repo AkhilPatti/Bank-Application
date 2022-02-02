@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BankApp.Models;
+using MySql.EntityFrameworkCore;
+using MySql.Data;
 using Microsoft.EntityFrameworkCore;
+
 namespace BankApp.Services
 {
     public class BankDbContext : DbContext
@@ -15,9 +18,14 @@ namespace BankApp.Services
         public DbSet<BankStaff> Staff { get; set; }
         public DbSet<BankCurrencies> BankCurrencies { get; set; }
 
+        public BankDbContext(DbContextOptions<BankDbContext> options)
+    : base(options)
+        { }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseMySQL(connectionString: @"server=localhost;user id=root;database=bankdatabase; password=Radha@65");
+            
+            optionsBuilder.UseMySQL(connectionString: @"server=localhost;user id=root;database=practice; password=Radha@65");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -35,14 +43,19 @@ namespace BankApp.Services
 
             modelBuilder.Entity<Account>(entity =>
             {
-                
+
                 entity.Property(m => m.accountHolderName);
                 entity.Property(m => m.accountId);
                 entity.Property(m => m.balance);
                 entity.Property(m => m.bankId);
                 entity.Property(m => m.phoneNumber);
-                entity.Property(m => m.pin);
+                entity.Property(m => m.pinHash);
             });
+            modelBuilder.Entity<Account>().HasOne<Bank>(a =>a.bank).WithMany(g=>g.accounts).HasForeignKey(s=>s.bankId);
+            
+                /*.HasRequired<Bank>(s => s.bankId)
+            .WithMany(g => g.Students)
+            .HasForeignKey<int>(s => s.CurrentGradeId) ;*/
             modelBuilder.Entity<BankStaff>(entity =>
             {
                 entity.Property(m => m.password);
@@ -51,6 +64,8 @@ namespace BankApp.Services
                 //entity.Property(m => m.gender);
                 entity.Property(m => m.bankId);
             });
+            modelBuilder.Entity<BankStaff>().HasOne<Bank>(a => a.bank).WithMany(g => g.bankStaff).HasForeignKey(s => s.staffId);
+            
             modelBuilder.Entity<Currency>(entity =>
             {
                 entity.Property(m => m.currencyCode);
@@ -63,10 +78,14 @@ namespace BankApp.Services
                 entity.Property(m => m.on);
                 entity.Property(m => m.receiveraccountId).HasDefaultValue("");
                 entity.Property(m => m.sourceAccountId).HasDefaultValue("");
-                entity.Property(m => m.tranactionId);
+                entity.Property(m => m.transactionId);
                 entity.Property(m => m.type);
             });
+            modelBuilder.Entity<Transaction>().HasOne<Account>(a => a.receiverAccount).WithMany(g => g.rtransactions).HasForeignKey(s => s.receiveraccountId);
+            modelBuilder.Entity<Transaction>().HasOne<Account>(a => a.sourceAccount).WithMany(g => g.stransactions).HasForeignKey(s => s.sourceAccountId);
             modelBuilder.Entity<BankCurrencies>().HasKey(m => new { m.bankId,m.currerncyCode});
+            modelBuilder.Entity<BankCurrencies>().HasOne<Bank>(a => a.bank).WithMany(g => g.bankCurrencies).HasForeignKey(s => s.bankId);
+            modelBuilder.Entity<BankCurrencies>().HasOne<Currency>(a => a.currency).WithMany(g => g.bankCurrencies).HasForeignKey(s => s.currerncyCode);
         }
     }
 }

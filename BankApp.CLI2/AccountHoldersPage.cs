@@ -20,7 +20,7 @@ namespace BankApp.CLI2
         {
             bool tryAgain = true;
             AccountService accountService = new AccountService();
-            accountService.StartService();
+            
             while (tryAgain)
             {
 
