@@ -10,7 +10,7 @@
 *.userosscache
 *.sln.docstates
 BankApp.CLI
-BankAPp.CLI2
+BankApp.CLI2
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
