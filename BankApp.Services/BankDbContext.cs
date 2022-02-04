@@ -64,7 +64,7 @@ namespace BankApp.Services
                 //entity.Property(m => m.gender);
                 entity.Property(m => m.bankId);
             });
-            modelBuilder.Entity<BankStaff>().HasOne<Bank>(a => a.bank).WithMany(g => g.bankStaff).HasForeignKey(s => s.staffId);
+            modelBuilder.Entity<BankStaff>().HasOne<Bank>(a => a.bank).WithMany(g => g.bankStaff).HasForeignKey(s => s.bankId);
             
             modelBuilder.Entity<Currency>(entity =>
             {
@@ -72,17 +72,18 @@ namespace BankApp.Services
                 entity.Property(m => m.exchangeRate);
                 entity.Property(m => m.name);
             });
+            //
             modelBuilder.Entity<Transaction>(entity =>
             {
                 entity.Property(m => m.amount);
                 entity.Property(m => m.on);
-                entity.Property(m => m.receiveraccountId).HasDefaultValue("");
-                entity.Property(m => m.sourceAccountId).HasDefaultValue("");
+                entity.Property(m => m.receiveraccountId);//.HasDefaultValue("");
+                entity.Property(m => m.sourceAccountId);//.HasDefaultValue("");
                 entity.Property(m => m.transactionId);
                 entity.Property(m => m.type);
             });
-            modelBuilder.Entity<Transaction>().HasOne<Account>(a => a.receiverAccount).WithMany(g => g.rtransactions).HasForeignKey(s => s.receiveraccountId);
-            modelBuilder.Entity<Transaction>().HasOne<Account>(a => a.sourceAccount).WithMany(g => g.stransactions).HasForeignKey(s => s.sourceAccountId);
+            modelBuilder.Entity<Transaction>().HasOne<Account>(a => a.receiverAccount).WithMany(g => g.rtransactions).HasForeignKey(s => s.receiveraccountId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Transaction>().HasOne<Account>(a => a.sourceAccount).WithMany(g => g.stransactions).HasForeignKey(s => s.sourceAccountId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<BankCurrencies>().HasKey(m => new { m.bankId,m.currerncyCode});
             modelBuilder.Entity<BankCurrencies>().HasOne<Bank>(a => a.bank).WithMany(g => g.bankCurrencies).HasForeignKey(s => s.bankId);
             modelBuilder.Entity<BankCurrencies>().HasOne<Currency>(a => a.currency).WithMany(g => g.bankCurrencies).HasForeignKey(s => s.currerncyCode);

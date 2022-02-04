@@ -29,6 +29,7 @@ namespace BankApp.Models
         [Column("BankId")]
         public string bankId { get; set; }
         public Bank bank { get; set; }
+        
         public ICollection<Transaction> rtransactions {get; set;}
         public ICollection<Transaction> stransactions { get; set; }
         

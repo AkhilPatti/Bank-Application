@@ -70,9 +70,7 @@ namespace BankApp.Services
                 return db.Banks.Single(m => m.bankId == bankId);
             }
             catch
-            {
-
-
+            { 
                 throw new InvalidBankId();
             }
         }
@@ -82,7 +80,7 @@ namespace BankApp.Services
             db.Add(new Account
             {
                 accountHolderName = name,
-                pinHash = pin,
+                pinHash = BCrypt.Net.BCrypt.HashPassword(pin),
                 phoneNumber = phoneNo,
                 balance = 0,
                 bankId = bankId,
@@ -170,12 +168,35 @@ namespace BankApp.Services
             db.Staff.Add(staff);
             return staff.staffId;
         }
-
+        public string FindBankId(string staffId)
+        { 
+            var bank = db.Staff.FirstOrDefault(i => i.staffId == staffId);
+                return bank.bankId;
+        }
+        public string CreateToken(string staffId)
+        {
+            var bankId = FindBankId(staffId);
+            List<Claim> claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Role,"staff"),
+                new Claim(ClaimTypes.Name,staffId),
+                new Claim("bankId",bankId)
+            };
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration.GetSection("AppSettings:Token").Value));
+            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            var token = new JwtSecurityToken
+            (
+                claims: claims,
+                signingCredentials: cred,
+                expires: DateTime.Now.AddDays(1));
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+            return jwt;
+        }
         public string CreateToken(Account account)
         {
             List<Claim> claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Role,"staff")
+                new Claim(ClaimTypes.Role,"User")
             };
             var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration.GetSection("AppSettings:Token").Value));
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
@@ -198,7 +219,7 @@ namespace BankApp.Services
                     throw new InvalidStaff();
 
                 }
-
+            ;
                 if (BCrypt.Net.BCrypt.Verify(password, staff.password))
                 {
                     return true;

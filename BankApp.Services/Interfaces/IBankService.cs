@@ -12,9 +12,13 @@ namespace BankApp.Services
         string CreateBank(string name);
         string CreateAccount(string name, string pin, string phoneNo, string bankId);
         string CreateToken(Account account);
+        string CreateToken(string staffId);
         bool DeleteAccount(string accountId);
         Account FindAccount(string _accountId);
         Bank FindBank(string bankId);
+        string FindBankId(string staffId);
+
+
         string GenerateRandomId(string name);
         List<(float amount, string sourceId, string recieverId, int type, DateTime dateTime)> GetTransaction(string accountId);
         bool RevertTransaction(string transactionId);

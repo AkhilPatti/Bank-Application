@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using BCrypt.Net;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BankApp.api.Controllers
 {
@@ -23,6 +24,7 @@ namespace BankApp.api.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles="user")]
     public class AccountsController : ControllerBase
     {
         private readonly IMapper mapper;
@@ -69,7 +71,7 @@ namespace BankApp.api.Controllers
             }
         }
 
-        [HttpPost("register")]
+        [HttpPost("register"),AllowAnonymous]
         public ActionResult<string> RegisterAccount([FromBody] CreateAccountDto accountDto)
         {
             try
@@ -85,15 +87,15 @@ namespace BankApp.api.Controllers
             }
         }
         
-        [HttpPost("login")]
-        public ActionResult<DisplayAccountDto> LoginAccount(LoginDto loginDto)
+        [HttpPost("login"),AllowAnonymous]
+        public ActionResult<string> LoginAccount(LoginDto loginDto)
         {
             try
             {   if (accountService.AccountValidator(loginDto.accountId, loginDto.password))
                 {
                     var account = accountService.FindAccount(loginDto.accountId);
                     string token = accountService.CreateToken(account);
-                    return Ok(mapper.Map<DisplayAccountDto>(account));
+                    return Ok(token);
                 }
                 else
                 {
@@ -103,6 +105,10 @@ namespace BankApp.api.Controllers
             catch (InvalidId)
             {
                 return BadRequest("Enter a Valid UserName");
+            }
+            catch(InvalidBankId)
+            {
+                return BadRequest("Enter a valid BankId");
             }
         }
 

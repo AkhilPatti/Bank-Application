@@ -15,13 +15,13 @@ namespace BankApp.Models
         [MaxLength(90)]
         [Column("TransactionId")]
         public string transactionId { get; set; }
-        [Required]
+        
         [Column("SenderId")]
         [MaxLength(25)]
         [ForeignKey("UserAccounts")]
         public string sourceAccountId { get; set; }
         public Account sourceAccount {get;set;}
-        [Required]
+        
         [Column("ReceiverId")]
         [MaxLength(25)]
         [ForeignKey("UserAccounts")]

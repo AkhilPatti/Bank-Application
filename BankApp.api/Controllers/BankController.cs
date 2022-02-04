@@ -11,13 +11,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BankApp.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace BankApp.api.Controllers
 {
+    
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "staff")]
+    
     public class BankController : ControllerBase
     {
+        
+        
         private readonly IMapper mapper;
         private BankDbContext db;
         private IAccountService accountService;
@@ -31,13 +38,19 @@ namespace BankApp.api.Controllers
             this.configuration = _configuration;
             this.bankService = _bankService;
         }
-        [HttpGet("{staffId}")]
-        public ActionResult StaffLogin(StaffLoginDto loginDto)
+        [HttpPost("Login"),AllowAnonymous]
+        public ActionResult<string> StaffLogin(StaffLoginDto loginDto)
         {
             try
             {
+
                 if (bankService.AuthenticateBankStaff(loginDto.staffId, loginDto.password))
-                    return Ok("logged in Successfully");
+                {    
+                    var token = bankService.CreateToken(loginDto.staffId);
+                 
+                 
+                 return Ok(token);
+                }
                 else
                     return BadRequest("Enter a Valid Password");
             }
@@ -45,10 +58,15 @@ namespace BankApp.api.Controllers
             {
                 return BadRequest("Enter a Valid StaffId ");
             }
+            
         }
         [HttpPost("CreateAccount")]
         public ActionResult<string> CreateAccount([FromBody] CreateAccountDto accountDto)
         {
+         if (User.FindFirstValue("bankId")!=accountDto.bankId)
+            {
+                return Unauthorized();
+            }
             try
             {
                 string accountId = bankService.CreateAccount(accountDto.accountHolderName, accountDto.password, accountDto.phoneNumber, accountDto.bankId);
@@ -64,6 +82,10 @@ namespace BankApp.api.Controllers
         [HttpPut("UpdateSameAccountCharges")]
         public ActionResult<GetBankDto> UpdateSameAccountCharges(string bankId, UpdateSameAccountChargesDto updateChargesDto)
         {
+            if (User.FindFirstValue("bankId") != bankId)
+            {
+                return Unauthorized();
+            }
             bankService.UpdateSameAccountCharges(updateChargesDto.newSameAccountImpsCharge, updateChargesDto.newSameAccountRtgsCharge,bankId);
             var bank = bankService.FindBank(bankId);
             return mapper.Map<GetBankDto>(bank);
@@ -71,6 +93,10 @@ namespace BankApp.api.Controllers
         [HttpPut("UpdateOtherAccountCharge")]
         public ActionResult<GetBankDto> UpdateOtherAccountCharges(string bankId, UpdateOtherAccountChargesDto updateChargesDto)
         {
+            if (User.FindFirstValue("bankId") != bankId)
+            {
+                return Unauthorized();
+            }
             bankService.UpdateSameAccountCharges(updateChargesDto.newOtherAccountImpsCharge, updateChargesDto.newOtherAccountRtgsCharge, bankId);
             var bank = bankService.FindBank(bankId);
             return mapper.Map<GetBankDto>(bank);
@@ -79,6 +105,10 @@ namespace BankApp.api.Controllers
         [HttpPut("{transacionId}")]
         public ActionResult<GetTransactionDto> RevertTrasanction (string transactionId,[FromBody]StaffLoginDto loginDto)
         {
+            if(User.FindFirstValue(ClaimTypes.Name) != loginDto.staffId)
+            {
+                return Unauthorized();
+            }
             try
             {
                 var isreverted = bankService.RevertTransaction(transactionId);

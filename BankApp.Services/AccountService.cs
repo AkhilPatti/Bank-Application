@@ -123,7 +123,8 @@ namespace BankApp.Services
                 var account = FindAccount(accountId);
                 account.balance += amount;
                 db.Update(account);
-                db.SaveChanges();
+                string transactionId = GenerateTransaction(null, accountId, amount, TransactionType.WithDrawl, GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), accountId, account.bankId));
+                db.SaveChangesAsync();
                 return account.balance;
             }
 
@@ -156,8 +157,9 @@ namespace BankApp.Services
                 else
                 {
                     account.balance -= amount;
+                    string transactionId =GenerateTransaction(id,null,amount,TransactionType.WithDrawl,GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), id,account.bankId));
                     db.Update(account);
-                    db.SaveChanges();
+                    db.SaveChangesAsync();
                     return account.balance;
                 }
             }
@@ -199,7 +201,7 @@ namespace BankApp.Services
                         }
                     }
                     raccount.balance += (float)(amount - (amount * charge));
-                    saccount.balance -= (float)(amount - (amount * charge));
+                    saccount.balance -=amount;
                     Transaction transaction = new Transaction
                     {
                         sourceAccountId = senderId,
@@ -224,6 +226,22 @@ namespace BankApp.Services
             {
                 throw new InvalidReceiver();
             }
+        }
+        private string GenerateTransaction(string senderId,string receiverId, float amount ,TransactionType type,string transactionId)
+        {
+            Transaction transaction = new Transaction
+            {
+                sourceAccountId = (int)type!=1?senderId:null,
+                receiveraccountId = (int)type!=2?receiverId:null,
+                amount = amount,
+                type = type,
+                on = DateTime.Now,
+                transactionId = transactionId
+
+            };
+            db.Transactions.Add(transaction);
+            db.SaveChanges();
+            return transaction.transactionId;
         }
 
         public List<string> GetCurrencies(string bankId)

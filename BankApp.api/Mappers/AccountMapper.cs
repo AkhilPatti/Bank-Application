@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using AutoMapper;
+using BankApp.api.DTOs.BankDtos;
 using BankApp.api.Dtos.AccountDtos;
 using BankApp.Models;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace BankApp.api.Mappers
             CreateMap<Account, DisplayAccountDto>().ReverseMap();
             CreateMap<GetBalanceDTO,Account>();
             CreateMap<GetTransactionDto, Transaction>();
+            CreateMap<GetBankDto, Bank>().ReverseMap();
         }
     }
 }

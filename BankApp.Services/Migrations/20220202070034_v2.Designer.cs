@@ -3,14 +3,16 @@ using System;
 using BankApp.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BankApp.Services.Migrations
 {
     [DbContext(typeof(BankDbContext))]
-    partial class BankDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220202070034_v2")]
+    partial class v2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -176,13 +178,17 @@ namespace BankApp.Services.Migrations
                         .HasColumnName("Time");
 
                     b.Property<string>("receiveraccountId")
+                        .IsRequired()
                         .HasMaxLength(25)
                         .HasColumnType("varchar(25)")
+                        .HasDefaultValue("")
                         .HasColumnName("ReceiverId");
 
                     b.Property<string>("sourceAccountId")
+                        .IsRequired()
                         .HasMaxLength(25)
                         .HasColumnType("varchar(25)")
+                        .HasDefaultValue("")
                         .HasColumnName("SenderId");
 
                     b.Property<int>("type")
@@ -244,12 +250,14 @@ namespace BankApp.Services.Migrations
                     b.HasOne("BankApp.Models.Account", "receiverAccount")
                         .WithMany("rtransactions")
                         .HasForeignKey("receiveraccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("BankApp.Models.Account", "sourceAccount")
                         .WithMany("stransactions")
                         .HasForeignKey("sourceAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("receiverAccount");
 
