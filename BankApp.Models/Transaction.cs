@@ -3,19 +3,41 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 namespace BankApp.Models
 {
+    [Table("Transactions", Schema = "practice")]
     public class Transaction
     {
-        public string TranactionId { get; set; }
-        public string SourceAccountId { get; set; }
-        public string AccountId { get; set; }
-        public int Amount { get; set; }
-        public TransactionType Type {get; set;}
-        public DateTime On { get; set; }
-        public string bankId { get; set; }
-        public Tuple<string,string,TransactionType,DateTime,int> getDetails()
-        { return Tuple.Create(SourceAccountId, AccountId, Type, On, Amount); }
+        [Required]
+        [Key]
+        [MaxLength(90)]
+        [Column("TransactionId")]
+        public string transactionId { get; set; }
+        
+        [Column("SenderId")]
+        [MaxLength(25)]
+        [ForeignKey("UserAccounts")]
+        public string sourceAccountId { get; set; }
+        public Account sourceAccount {get;set;}
+        
+        [Column("ReceiverId")]
+        [MaxLength(25)]
+        [ForeignKey("UserAccounts")]
+        public string receiveraccountId { get; set; }
+        public Account receiverAccount { get; set; }
+        [Required]
+        [Column("Amount")]
+        public float amount { get; set; }
+        [Required]
+        [Column("TransactionType")]
+        public TransactionType type {get; set;}
+        [Required]
+        [Column("Time")]
+        public DateTime on { get; set; }
+        
+        
+        
     }
 }

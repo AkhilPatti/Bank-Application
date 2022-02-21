@@ -1,179 +1,281 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using BankApp.Models;
 using BankApp.Models.Exceptions;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.Extensions.Configuration;
+
 namespace BankApp.Services
 {
-    public static class AccountService
+    public class AccountService : IAccountService
     {
-        //private List<Account> accounts;
-        public static string bankId;
-        /*public static AccountService()
+
+        BankDbContext db;
+        private IConfiguration configuration;
+        public AccountService(BankDbContext _db, IConfiguration _configuration)
         {
-            accounts = new List<Account>();
-        }*/
-        private static Bank FindBank(string bankId)
+            this.db = _db;
+            this.configuration = _configuration;
+
+        }
+
+        private Bank FindBank(string  bankId)
         {
             try
             {
-                return BankService.banks.Single(m => m.Id == bankId);
+                 return db.Banks.Single(m => m.bankId == bankId);
             }
             catch
             {
                 throw new InvalidBankId();
             }
         }
-        public static string CreateAccount(string Name, string newPin, string Number, string bankId)
+        public string CreateAccount(string name, string newPin, string phoneNo, string bankId)
         {
-            Bank bank = FindBank(bankId);
-            Account account = new Account
-            { accountId = BankService.GenerateRandomId(Name),
-                pin = newPin,
-                phoneNumber = Number,
-
-            };
-            if (!AccountExists(account.accountId, bankId))
+            string accountId = name.Substring(0, 3) + bankId.Substring(0, 3) + DateTime.Now.ToString("ddMMyyyyyHHmmss");
+            db.Add(new Account
             {
-                bank.Accounts.Add(account);
-
-                return account.accountId;
-            }
-            throw new InvalidId();
-
-
+                accountHolderName = name,
+                pinHash = BCrypt.Net.BCrypt.HashPassword(newPin),
+                phoneNumber = phoneNo,
+                balance = 0,
+                bankId = bankId,
+                accountId = accountId,
+            });
+            db.SaveChanges();
+            return accountId;
         }
-        private static bool AccountValidator(string id, string pin, string bankId)
+        public string CreateToken(Account account)
         {
-            Bank bank = FindBank(bankId);
-            try
+            List<Claim> claims = new List<Claim>
             {
-                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
-                if (account.pin != pin)
+                new Claim(ClaimTypes.Role,"user"),
+                new Claim("accountId",account.accountId)
+            };
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration.GetSection("AppSettings:Token").Value));
+            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            var token = new JwtSecurityToken
+            (
+                claims: claims,
+                signingCredentials: cred,
+                expires: DateTime.Now.AddDays(1));
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+            return jwt;
+        }
+        public bool AccountValidator(string accountId, string pin)
+        {
+                var account = FindAccount(accountId);
+                if (account == null)
                 {
 
-                    throw new InvalidPin();
+                    throw new InvalidId();
+
                 }
-                else
+
+                if (BCrypt.Net.BCrypt.Verify(pin,account.pinHash))
                 {
                     return true;
                 }
-            }
-            catch (InvalidOperationException)
-            {
+                else
+                {
+                    return false;
+                }
+        }
 
+        
+
+        public Account FindAccount(string id)
+        {
+            Account account = db.Accounts.SingleOrDefault(m => String.Equals(m.accountId, id));
+
+            if (account!=null)
+            {
+                return account;
+            }
+            else
+            {
                 throw new InvalidId();
             }
-
         }
-
-        private static bool AccountExists(string id, string bankId)
-        {
-            Bank bank = FindBank(bankId);
-            try
+        public float Deposit(float amount, string accountId, string pin, string currencyCode)
+        {   
+            if (!AccountValidator(accountId, pin))
             {
-                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
-                return true;
+                throw new InvalidPin();
             }
-            catch (InvalidOperationException)
+            else
             {
-                return false;
-            }
-        }
-
-        public static void Deposit(int amount, string id, string pin, string bankId)
-        {
-
-            Bank bank = FindBank(bankId);
-            if (AccountValidator(id, pin, bankId))
-            {
-                Account account = bank.Accounts.Single(m => String.Equals(m.accountId, id));
+                var account = FindAccount(accountId);
+                var bankId = account.bankId;
+                amount = ConvertToRupees(currencyCode, amount, bankId);
                 account.balance += amount;
-                UpdateTransaction(account, "", id, amount, TransactionType.Debit, bankId);
+                db.Update(account);
+                string transactionId = GenerateTransaction(null, accountId, amount, TransactionType.WithDrawl, GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), accountId, account.bankId));
+                db.SaveChangesAsync();
+                return account.balance;
             }
 
         }
-        public static void WithDraw(int amount, string id, string pin, string bankId)
+        public float ConvertToRupees(string currencyCode, float amount, string bankId)
         {
-            Bank bank = FindBank(bankId);
-            if (AccountValidator(id, pin, bankId))
+            if (CheckCurrencyExist(bankId, currencyCode))
             {
-                Account account = bank.Accounts.First(m => String.Equals(m.accountId, id));
-                if (account.balance < amount)
+                var currency = db.Currencies.Single(m => String.Equals(m.currencyCode, currencyCode));
+                float newAmount = amount * (float)currency.exchangeRate;
+                Console.WriteLine(currency.exchangeRate);
+                return newAmount;
+            }
+            else
+            {
+                throw new InvalidCurrencyCode();
+            }
+        }
+        public float WithDraw(float amount, string id, string pin)
+        {
+            if (AccountValidator(id, pin))
+            {
+
+                Account account = FindAccount(id);
+                float balance = account.balance;
+                if (balance < amount)
                 {
                     throw new NotEnoughBalance();
                 }
                 else
                 {
                     account.balance -= amount;
-                    UpdateTransaction(account, "", id, amount, TransactionType.Credit, bankId);
+                    string transactionId =GenerateTransaction(id,null,amount,TransactionType.WithDrawl,GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), id,account.bankId));
+                    db.Update(account);
+                    db.SaveChangesAsync();
+                    return account.balance;
                 }
             }
-
+            else { throw new InvalidPin(); }
         }
-        public static void Transfer(string senderId, string receiverId, string senderPin, int amount, string bankId)
-        {
-            Bank bank = FindBank(bankId);
-            if (AccountValidator(senderId, senderPin, bankId))
-            {
-                if (AccountExists(receiverId, bankId))
-                {
-                    Account Raccount = bank.Accounts.First(m => String.Equals(m.accountId, receiverId));
-                    Raccount.balance += amount;
-                    //updating Sender's tranaction History
-                    UpdateTransaction(Raccount, senderId, receiverId, amount, TransactionType.Debit, bankId);
 
-                    Account Saccount = bank.Accounts.First(m => String.Equals(m.accountId, senderId));
-                    Saccount.balance += amount;
-                    //updating Receiver's tranaction History
-                    UpdateTransaction(Saccount, receiverId, senderId, amount, TransactionType.Credit, bankId);
+        public string Transfer(string senderId, string receiverId, string senderPin, float amount, TransactionService transactionService)
+        {
+            
+
+            if (AccountValidator(senderId, senderPin))
+            {
+                Account saccount = FindAccount(senderId);
+                Account raccount = db.Accounts.SingleOrDefault(m => m.accountId == receiverId);
+                if (raccount!=null)
+                {
+                    Bank sbank = FindBank(saccount.bankId);
+                    if (saccount.balance < amount)
+                    { throw new NotEnoughBalance(); }
+                    double charge;
+                    if ((int)transactionService == 1)
+                    {
+
+                        if (string.Equals(raccount.bankId, saccount.bankId))
+                        { charge = sbank.sImps; }
+                        else
+                        {
+                            charge = sbank.oImps;
+                        }
+                    }
+
+                    else
+                    {
+
+                        if (string.Equals(raccount.bankId, saccount.bankId)) { charge = sbank.sRtgs; }
+                        else
+                        {
+                            charge = sbank.oRtgs;
+                        }
+                    }
+                    raccount.balance += (float)(amount - (amount * charge));
+                    saccount.balance -=amount;
+                    Transaction transaction = new Transaction
+                    {
+                        sourceAccountId = senderId,
+                        receiveraccountId = receiverId,
+                        amount = amount,
+                        type = TransactionType.Transfer,
+                        on = DateTime.Now,
+                        transactionId = GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), senderId, saccount.bankId),
+
+                    };
+                    db.Transactions.Add(transaction);
+                    db.SaveChanges();
+                    return transaction.transactionId;
                 }
                 else
                 {
                     throw new InvalidReceiver();
                 }
+
             }
-
+            else
+            {
+                throw new InvalidReceiver();
+            }
         }
-
-        public static void UpdateTransaction(Account account, string sourceId, string recieverId, int amount, TransactionType type, string bankId)
+        private string GenerateTransaction(string senderId,string receiverId, float amount ,TransactionType type,string transactionId)
         {
             Transaction transaction = new Transaction
             {
-                SourceAccountId = sourceId,
-                AccountId = recieverId,
-                Amount = amount,
-                Type = type,
-                On = DateTime.Now,
-                TranactionId = GenerateTransId(DateTime.Now.ToString("ddMMyyyy"), recieverId, bankId),
+                sourceAccountId = (int)type!=1?senderId:null,
+                receiveraccountId = (int)type!=2?receiverId:null,
+                amount = amount,
+                type = type,
+                on = DateTime.Now,
+                transactionId = transactionId
 
             };
-            account.transactions.Add(transaction);
-
+            db.Transactions.Add(transaction);
+            db.SaveChanges();
+            return transaction.transactionId;
         }
 
-        internal static string GenerateTransId(string date, string AccountId, string bankId)
+        public List<string> GetCurrencies(string bankId)
+        {
+            List<string> currencies = new List<string>();
+            var bankcurrencies = db.BankCurrencies.Where(m => m.bankId == bankId).ToList();
+            foreach (var item in bankcurrencies)
+            {
+                currencies.Add(item.currerncyCode);
+            }
+            return currencies;
+        }
+        public bool CheckCurrencyExist(string bankId, string currencyCode)
+        {
+            try
+            {
+                var currency = db.BankCurrencies.Single(m => (String.Equals(bankId, m.bankId) && (String.Equals(currencyCode, m.currerncyCode))));
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        internal string GenerateTransId(string date, string AccountId, string bankId)
         {
             return "TXN" + bankId + AccountId + date;
         }
-        public static List<Tuple<string, string, TransactionType, DateTime, int>> getTranactionDetails(string BankId, string AccountId, string pin)
+        public Transaction FindTransaction(string transactionId)
         {
-
-            var transList = new List<Tuple<string, string, TransactionType, DateTime, int>>();
-            if (AccountValidator(AccountId, pin, bankId))
+            return db.Transactions.FirstOrDefault(m => m.transactionId== transactionId);
+        }
+        public List<(float, string, string, int, DateTime,string)> GetTransaction(string accountId)
+        {
+            List<(float, string, string, int, DateTime,string)> transactions = new List<(float, string, string, int, DateTime,string)>();
+            var transaction = db.Transactions.Where(m => ((m.receiveraccountId == accountId) || (m.sourceAccountId == accountId))).ToList();
+            foreach (var item in transaction)
             {
-
-                Bank bank = FindBank(BankId);
-                Account account = bank.Accounts.Single(m => m.accountId == AccountId);
-                foreach (Transaction trans in account.transactions)
-                {
-                    transList.Add(Tuple.Create(trans.SourceAccountId, trans.AccountId, trans.Type, trans.On, trans.Amount));
-                }
+                transactions.Add((item.amount, item.sourceAccountId, item.receiveraccountId, (int)item.type, item.on,item.transactionId));
             }
-            return transList;
+            return transactions;
         }
 
-
-       }
     }
 
+}

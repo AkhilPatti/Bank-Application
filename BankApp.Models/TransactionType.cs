@@ -8,7 +8,8 @@ namespace BankApp.Models
 {
     public enum TransactionType
     {
-        Credit=1,
-        Debit=-1
+        WithDrawl =0,
+        Deposit,
+        Transfer,
     };
 }
