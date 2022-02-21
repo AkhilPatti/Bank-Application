@@ -23,17 +23,15 @@ namespace BankApp.api.Controllers
     
     public class BankController : ControllerBase
     {
-        
+
         
         private readonly IMapper mapper;
-        private BankDbContext db;
         private IAccountService accountService;
         private IConfiguration configuration;
         public IBankService bankService;
-        public BankController(BankDbContext _db, IAccountService _accountService, IMapper _mapper, IConfiguration _configuration, IBankService _bankService)
+        public BankController( IAccountService _accountService, IMapper _mapper, IConfiguration _configuration, IBankService _bankService)
         {
             this.mapper = _mapper;
-            this.db = _db;
             this.accountService = _accountService;
             this.configuration = _configuration;
             this.bankService = _bankService;
@@ -61,11 +59,12 @@ namespace BankApp.api.Controllers
             
         }
         [HttpPost("CreateAccount")]
-        public ActionResult<string> CreateAccount([FromBody] CreateAccountDto accountDto)
+        public ActionResult<string> CreateAccount(CreateAccountDto accountDto)
         {
+            
          if (User.FindFirstValue("bankId")!=accountDto.bankId)
             {
-                return Unauthorized();
+                return Unauthorized("You are unAuthorized to create an Account in this bank");
             }
             try
             {
@@ -78,6 +77,26 @@ namespace BankApp.api.Controllers
             {
                 return BadRequest("Enter a Valid BankId");
             }
+        }
+
+        [HttpDelete("Delete")]
+        public ActionResult<string> DeleteAccount(string accountId)
+        {
+            
+            try
+            {
+                if (bankService.DeleteAccount(accountId, User.FindFirstValue("bankId")))
+                    return Ok("Deleted");
+            }
+            catch(AccountNotFound)
+            {
+                NotFound("there exists no account with given accountId");
+            }
+            catch(InvalidBankId)
+            {
+                return Unauthorized("You are not allowed to delete this account");
+            }
+                return BadRequest();
         }
         [HttpPut("UpdateSameAccountCharges")]
         public ActionResult<GetBankDto> UpdateSameAccountCharges(string bankId, UpdateSameAccountChargesDto updateChargesDto)

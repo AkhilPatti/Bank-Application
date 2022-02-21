@@ -20,6 +20,7 @@ namespace BankApp.api.Mappers
             CreateMap<GetBalanceDTO,Account>();
             CreateMap<GetTransactionDto, Transaction>();
             CreateMap<GetBankDto, Bank>().ReverseMap();
+            
         }
     }
 }

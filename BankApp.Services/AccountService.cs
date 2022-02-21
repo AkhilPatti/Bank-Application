@@ -22,11 +22,11 @@ namespace BankApp.Services
 
         }
 
-        private Bank FindBank(string bankId)
+        private Bank FindBank(string  bankId)
         {
             try
             {
-                return db.Banks.Single(m => m.bankId == bankId);
+                 return db.Banks.Single(m => m.bankId == bankId);
             }
             catch
             {
@@ -52,7 +52,8 @@ namespace BankApp.Services
         {
             List<Claim> claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Role,"user")
+                new Claim(ClaimTypes.Role,"user"),
+                new Claim("accountId",account.accountId)
             };
             var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration.GetSection("AppSettings:Token").Value));
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
@@ -74,7 +75,7 @@ namespace BankApp.Services
 
                 }
 
-                if (BCrypt.Net.BCrypt.Verify(pin, account.pinHash))
+                if (BCrypt.Net.BCrypt.Verify(pin,account.pinHash))
                 {
                     return true;
                 }
@@ -84,19 +85,7 @@ namespace BankApp.Services
                 }
         }
 
-        /*private bool AccountExists(string id)
-        {
-            try
-            {
-
-                var Account = db.Accounts.Single(m => m.accountId == id);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }*/
+        
 
         public Account FindAccount(string id)
         {
@@ -112,8 +101,7 @@ namespace BankApp.Services
             }
         }
         public float Deposit(float amount, string accountId, string pin, string currencyCode)
-        {
-
+        {   
             if (!AccountValidator(accountId, pin))
             {
                 throw new InvalidPin();
@@ -121,6 +109,8 @@ namespace BankApp.Services
             else
             {
                 var account = FindAccount(accountId);
+                var bankId = account.bankId;
+                amount = ConvertToRupees(currencyCode, amount, bankId);
                 account.balance += amount;
                 db.Update(account);
                 string transactionId = GenerateTransaction(null, accountId, amount, TransactionType.WithDrawl, GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), accountId, account.bankId));

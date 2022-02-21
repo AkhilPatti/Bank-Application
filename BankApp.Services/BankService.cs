@@ -13,7 +13,7 @@ namespace BankApp.Services
     public class BankService : IBankService
     {
         //#pragma warning disable 0649
-        
+
         BankDbContext db;
         IConfiguration configuration;
         public BankService(IConfiguration _configuration, BankDbContext _bankDbContext)
@@ -53,6 +53,7 @@ namespace BankApp.Services
                 return false;
             }
         }
+
         public string GenerateRandomId(string name)
         {
             name = name.ToUpper();
@@ -70,7 +71,7 @@ namespace BankApp.Services
                 return db.Banks.Single(m => m.bankId == bankId);
             }
             catch
-            { 
+            {
                 throw new InvalidBankId();
             }
         }
@@ -90,21 +91,31 @@ namespace BankApp.Services
             return accountId;
         }
 
-        public bool DeleteAccount(string accountId)
+        public bool DeleteAccount(string accountId, string bankId)
         {
             try
             {
                 var account = db.Accounts.Single(m => m.accountId == accountId);
-                db.Accounts.Remove(account);
-                db.SaveChanges();
-                return true;
+                if (account.bankId == bankId)
+                {
+                    db.Accounts.Remove(account);
+                    db.SaveChanges();
+                    return true;
+                }
+                else
+                {
+                    throw new InvalidBankId();
+                }
+            }
+            catch(InvalidBankId)
+            {
+                throw new InvalidBankId();
             }
             catch
             {
                 throw new AccountNotFound();
             }
         }
-
         public float AddCurrency(string currencyCode, string bankId)
         {
 

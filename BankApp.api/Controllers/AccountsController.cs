@@ -113,8 +113,12 @@ namespace BankApp.api.Controllers
         }
 
         [HttpPut("Deposit")]
-        public ActionResult<DisplayAccountDto>  Deposit(DepositAmountDto depositDto)
+        public ActionResult<DisplayAccountDto> Deposit(DepositAmountDto depositDto)
         {
+            if (User.FindFirstValue("accountId") != depositDto.accountId)
+            {
+                return Unauthorized("You aren't allowed to deposit or access this account");
+            }
             try
             {
                 float balance = accountService.Deposit(depositDto.amount, depositDto.accountId, depositDto.password, depositDto.currencyCode);
@@ -134,6 +138,10 @@ namespace BankApp.api.Controllers
         [HttpPut("WithDrawl")]
         public ActionResult<DisplayAccountDto> WithDrawl(WithDrawlDto withDrawlDto)
         {
+            if (User.FindFirstValue("accountId") != withDrawlDto.accountId)
+            {
+                return Unauthorized("You aren't allowed to withdrawl or access this account");
+            }
             float balance = accountService.WithDraw(withDrawlDto.amount, withDrawlDto.accountId, withDrawlDto.password );
             var account = accountService.FindAccount(withDrawlDto.accountId);
             return Ok(mapper.Map<DisplayAccountDto>(account));
@@ -142,6 +150,10 @@ namespace BankApp.api.Controllers
         [HttpPost("Transfer")]
         public ActionResult<Transaction> Transfer (TransferAmountDto transferDto)
         {
+            if (User.FindFirstValue("accountId") != transferDto.senderAccountId)
+            {
+                return Unauthorized("You aren't allowed to access this account");
+            }
             try
             {
                 string transactionId = accountService.Transfer(transferDto.senderAccountId, transferDto.reciverAccountId, transferDto.senderPassword, transferDto.amount, transferDto.transactionservice);
@@ -160,6 +172,10 @@ namespace BankApp.api.Controllers
         [HttpGet("GetTransactions/{accountId}")]
         public ActionResult<IEnumerable<GetTransactionDto>> GetTrasnactions(string accountId)
         {
+            if (User.FindFirstValue("accountId") != accountId)
+            {
+                return Unauthorized("You aren't allowed to view or acess this account's transactions");
+            }
             var transactionList = accountService.GetTransaction(accountId);
             List<GetTransactionDto> transactionListDto = new() ;
             foreach(var i in transactionList)
