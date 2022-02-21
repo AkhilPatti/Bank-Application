@@ -192,21 +192,6 @@ namespace BankApp.api.Controllers
             }
             return transactionListDto;
         }
-        /*private string CreateToken(Account account)
-        {
-            List<Claim> claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Role,"user")
-            };
-            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration.GetSection("AppSettings:Token").Value));
-            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-            var token = new JwtSecurityToken
-            (
-                claims: claims,
-                signingCredentials: cred,
-                expires: DateTime.Now.AddDays(1));
-            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-            return jwt;
-        }*/
+        
     }
 }
