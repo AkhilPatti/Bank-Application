@@ -5,11 +5,6 @@ using BankApp.Models.Exceptions;
 using BankApp.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using BankApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
@@ -27,18 +22,20 @@ namespace BankApp.api.Controllers
         
         private readonly IMapper mapper;
         private IAccountService accountService;
-        private IConfiguration configuration;
+        
         public IBankService bankService;
-        public BankController( IAccountService _accountService, IMapper _mapper, IConfiguration _configuration, IBankService _bankService)
+        public BankController( IAccountService _accountService, IMapper _mapper, IBankService _bankService)
         {
             this.mapper = _mapper;
             this.accountService = _accountService;
-            this.configuration = _configuration;
+            
             this.bankService = _bankService;
         }
         [HttpPost("Login"),AllowAnonymous]
         public ActionResult<string> StaffLogin(StaffLoginDto loginDto)
         {
+            loginDto.staffId = loginDto.staffId.Trim();
+            loginDto.password = loginDto.password.Trim();
             try
             {
 
@@ -71,7 +68,7 @@ namespace BankApp.api.Controllers
                 string accountId = bankService.CreateAccount(accountDto.accountHolderName, accountDto.password, accountDto.phoneNumber, accountDto.bankId);
                 Account account = accountService.FindAccount(accountId);
                 var token = accountService.CreateToken(account);
-                return Ok(token);
+                return Ok(accountId);
             }
             catch (InvalidBankId)
             {
@@ -96,59 +93,47 @@ namespace BankApp.api.Controllers
             {
                 return Unauthorized("You are not allowed to delete this account");
             }
-                return BadRequest();
+                return BadRequest("Check your details");
         }
         [HttpPut("UpdateSameAccountCharges")]
         public ActionResult<GetBankDto> UpdateSameAccountCharges(string bankId, UpdateSameAccountChargesDto updateChargesDto)
         {
+            bankId = bankId.Trim();
             if (User.FindFirstValue("bankId") != bankId)
-            {
-                return Unauthorized();
-            }
-            bankService.UpdateSameAccountCharges(updateChargesDto.newSameAccountImpsCharge, updateChargesDto.newSameAccountRtgsCharge,bankId);
-            var bank = bankService.FindBank(bankId);
-            return mapper.Map<GetBankDto>(bank);
-        }
-        [HttpPut("UpdateOtherAccountCharge")]
-        public ActionResult<GetBankDto> UpdateOtherAccountCharges(string bankId, UpdateOtherAccountChargesDto updateChargesDto)
-        {
-            if (User.FindFirstValue("bankId") != bankId)
-            {
-                return Unauthorized();
-            }
-            bankService.UpdateSameAccountCharges(updateChargesDto.newOtherAccountImpsCharge, updateChargesDto.newOtherAccountRtgsCharge, bankId);
-            var bank = bankService.FindBank(bankId);
-            return mapper.Map<GetBankDto>(bank);
-        }
-
-        [HttpPut("{transacionId}")]
-        public ActionResult<GetTransactionDto> RevertTrasanction (string transactionId,[FromBody]StaffLoginDto loginDto)
-        {
-            if(User.FindFirstValue(ClaimTypes.Name) != loginDto.staffId)
             {
                 return Unauthorized();
             }
             try
             {
-                var isreverted = bankService.RevertTransaction(transactionId);
-                if (isreverted)
-                {
-                    return Ok("the transaction is reverted");
-                }
+                bankService.UpdateSameAccountCharges(updateChargesDto.newSameAccountImpsCharge, updateChargesDto.newSameAccountRtgsCharge, bankId);
+                var bank = bankService.FindBank(bankId);
+                return mapper.Map<GetBankDto>(bank);
             }
-            catch(InvalidTransactionId)
+            catch (InvalidBankId)
             {
-                return BadRequest("Enter Valid Transaction Id");
+                return BadRequest("Enter a Valid BankId");
             }
-            catch(InvalidId)
-            {
-                return BadRequest("Enter a Valid Sender Id");
-            }
-            catch(InvalidReceiver)
-            {
-                return BadRequest("Enter a Valid Receiver Id");
-            }
-            return Ok();
         }
+        [HttpPut("UpdateOtherAccountCharge")]
+        public ActionResult<GetBankDto> UpdateOtherAccountCharges(string bankId, UpdateOtherAccountChargesDto updateChargesDto)
+        {
+            bankId = bankId.Trim();
+            if (User.FindFirstValue("bankId") != bankId)
+            {
+                return Unauthorized();
+            }
+            try
+            {
+                bankService.UpdateSameAccountCharges(updateChargesDto.newOtherAccountImpsCharge, updateChargesDto.newOtherAccountRtgsCharge, bankId);
+                var bank = bankService.FindBank(bankId);
+                return mapper.Map<GetBankDto>(bank);
+            }
+            catch(InvalidBankId)
+            {
+                return BadRequest("Enter a Valid BankId");
+            }
+        }
+
+       
     }
 }

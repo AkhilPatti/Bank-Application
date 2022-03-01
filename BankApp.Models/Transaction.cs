@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -36,8 +34,5 @@ namespace BankApp.Models
         [Required]
         [Column("Time")]
         public DateTime on { get; set; }
-        
-        
-        
     }
 }

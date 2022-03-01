@@ -77,8 +77,8 @@ namespace BankApp.Services
             {
                 entity.Property(m => m.amount);
                 entity.Property(m => m.on);
-                entity.Property(m => m.receiveraccountId);//.HasDefaultValue("");
-                entity.Property(m => m.sourceAccountId);//.HasDefaultValue("");
+                entity.Property(m => m.receiveraccountId);
+                entity.Property(m => m.sourceAccountId);
                 entity.Property(m => m.transactionId);
                 entity.Property(m => m.type);
             });
