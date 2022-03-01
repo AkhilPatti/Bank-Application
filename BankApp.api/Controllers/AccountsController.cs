@@ -12,10 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 using System.Security.Cryptography;
 using System.Security.Claims;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using BCrypt.Net;
+
 using Microsoft.AspNetCore.Authorization;
 
 namespace BankApp.api.Controllers
@@ -27,29 +24,31 @@ namespace BankApp.api.Controllers
     [Authorize(Roles="user")]
     public class AccountsController : ControllerBase
     {
+        
         private readonly IMapper mapper;
         private BankDbContext db;
         private IAccountService accountService;
-        private IConfiguration configuration;
-        public AccountsController(BankDbContext _db, IAccountService _accountService, IMapper _mapper, IConfiguration _configuration)
+        
+        public AccountsController(BankDbContext _db, IAccountService _accountService, IMapper _mapper )
         {
             this.mapper = _mapper;
             this.db = _db;
             this.accountService = _accountService;
-            this.configuration = _configuration;
-
         }
         [HttpGet]
         public async Task<ActionResult<List<DisplayAccountDto>>> Get()
         {
+            
             var accList = await db.Accounts.ToListAsync();
-            var accdto = mapper.Map<IEnumerable<DisplayAccountDto>>(accList);//mapper.Map<Account>(accountDto)
+            var accdto = mapper.Map<IEnumerable<DisplayAccountDto>>(accList);
             return Ok(accdto);
         }
 
         [HttpGet("{id}")]
         public ActionResult<DisplayAccountDto> GetAccount(string id,string password )
         {
+            id = id.Trim();
+            password = password.Trim();
             try
             {
                 
@@ -63,33 +62,19 @@ namespace BankApp.api.Controllers
                 {
                     return BadRequest("Enter a Valid Password");
                 }
-  
             }
             catch
             {
-                return NotFound();
+                return NotFound("Enter a Valid AccountId");
             }
         }
 
-        [HttpPost("register"),AllowAnonymous]
-        public ActionResult<string> RegisterAccount([FromBody] CreateAccountDto accountDto)
-        {
-            try
-            {
-                string accountId = accountService.CreateAccount(accountDto.accountHolderName,accountDto.password, accountDto.phoneNumber, accountDto.bankId);
-                Account account = accountService.FindAccount(accountId);
-                var token = accountService.CreateToken(account);
-                return Ok(token);
-            }
-            catch(InvalidBankId)
-            {
-                return BadRequest("Enter a Valid BankId");
-            }
-        }
         
         [HttpPost("login"),AllowAnonymous]
         public ActionResult<string> LoginAccount(LoginDto loginDto)
         {
+            loginDto.accountId = loginDto.accountId.Trim();
+            loginDto.password = loginDto.password.Trim();
             try
             {   if (accountService.AccountValidator(loginDto.accountId, loginDto.password))
                 {
@@ -99,12 +84,12 @@ namespace BankApp.api.Controllers
                 }
                 else
                 {
-                    return BadRequest("Enter a Valid Password");
+                    return BadRequest("Invalid accountId or Password");
                 }
             }
             catch (InvalidId)
             {
-                return BadRequest("Enter a Valid UserName");
+                return BadRequest("Invalid accountId or password");
             }
             catch(InvalidBankId)
             {
@@ -115,98 +100,208 @@ namespace BankApp.api.Controllers
         [HttpPut("Deposit")]
         public ActionResult<DisplayAccountDto> Deposit(DepositAmountDto depositDto)
         {
+            
+            if(!ModelState.IsValid)
+            {
+                return BadRequest("please check the data enter");
+            }
+            
+            depositDto.accountId = depositDto.accountId.Trim();
+            depositDto.currencyCode = depositDto.currencyCode.Trim();
+            depositDto.password = depositDto.password.Trim();
             if (User.FindFirstValue("accountId") != depositDto.accountId)
             {
                 return Unauthorized("You aren't allowed to deposit or access this account");
             }
+            float amount = 0;
             try
             {
-                float balance = accountService.Deposit(depositDto.amount, depositDto.accountId, depositDto.password, depositDto.currencyCode);
+                amount=Convert.ToSingle(depositDto.amount);
+                if (amount < 0)
+                {
+                    return BadRequest("Enter valid amount");
+                }
+            }
+            catch
+            {
+                
+                return BadRequest("Enter Valid Amount");
+            }
+            try
+            {
+                
+                float balance = accountService.Deposit(amount, depositDto.accountId, depositDto.password, depositDto.currencyCode);
                 var account = accountService.FindAccount(depositDto.accountId);
                 return Ok(mapper.Map<DisplayAccountDto>(account));
             }
             catch(InvalidId)
             {
-                return BadRequest("Enter a Valid AccountId");
+                return BadRequest("Invalid accountId or Password");
             }
             catch(InvalidPin)
             {
-                return BadRequest("Enter a Valid Password");
+                return BadRequest("Invalid accountId or Password");
+            }
+            catch (InvalidCurrencyCode)
+            {
+                return BadRequest("This currency is not accepted by the bank");
             }
         }
 
-        [HttpPut("WithDrawl")]
-        public ActionResult<DisplayAccountDto> WithDrawl(WithDrawlDto withDrawlDto)
+        [HttpPut("Withdrawl")]
+        public ActionResult<DisplayAccountDto> Withdrawl(WithDrawlDto withDrawlDto)
         {
+            withDrawlDto.accountId = withDrawlDto.accountId.Trim();
+            withDrawlDto.password = withDrawlDto.password.Trim();
             if (User.FindFirstValue("accountId") != withDrawlDto.accountId)
             {
                 return Unauthorized("You aren't allowed to withdrawl or access this account");
             }
-            float balance = accountService.WithDraw(withDrawlDto.amount, withDrawlDto.accountId, withDrawlDto.password );
-            var account = accountService.FindAccount(withDrawlDto.accountId);
-            return Ok(mapper.Map<DisplayAccountDto>(account));
+            float amount = 0;
+            try
+            {
+                amount = Convert.ToSingle(withDrawlDto.amount);
+                if (amount < 0)
+                {
+                    return BadRequest("Enter valid amount");
+                }
+            }
+            catch
+            {
+
+                return BadRequest("Enter Valid Amount");
+            }
+            try
+            {
+                float balance = accountService.Withdrawl(amount, withDrawlDto.accountId, withDrawlDto.password);
+                var account = accountService.FindAccount(withDrawlDto.accountId);
+
+                return Ok(mapper.Map<DisplayAccountDto>(account));
+            }
+            catch(InvalidCurrencyCode)
+            {
+                return BadRequest("Please check the currecy code");
+            }
+            catch(NotEnoughBalance)
+            {
+                return BadRequest("Your account doesn't have enough balance");
+            }
+            catch(InvalidId)
+            {
+                return BadRequest("Invalid accountId or Password");
+            }
+            catch(InvalidPin)
+            {
+                return BadRequest("Invalid accountId or Password");
+            }
         }
 
         [HttpPost("Transfer")]
-        public ActionResult<Transaction> Transfer (TransferAmountDto transferDto)
+        public  ActionResult<GetTransactionDto> Transfer (TransferAmountDto transferDto)
         {
+            transferDto.currencycode = transferDto.currencycode.Trim();
+            transferDto.reciverAccountId = transferDto.reciverAccountId.Trim();
+            transferDto.senderAccountId = transferDto.senderAccountId.Trim();
+            transferDto.senderPassword = transferDto.senderPassword.Trim();
+            transferDto.transactionservice = transferDto.transactionservice.ToLower().Trim();
+            TransactionService transactionService;
+            switch (transferDto.transactionservice)
+            {
+                case "imps" :
+                    transactionService = TransactionService.IMPS;
+                    break;
+                case "rtgs":
+                    transactionService = TransactionService.RTGS;
+                    break;
+                default:
+                    return BadRequest("Enter valid Trasnaction Service");
+            }
+            float amount = 0;
+            try
+            {
+                amount = Convert.ToSingle(transferDto.amount);
+                if (amount < 0)
+                {
+                    return BadRequest("Enter valid amount");
+                }
+            }
+            catch
+            {
+
+                return BadRequest("Enter Valid Amount");
+            }
             if (User.FindFirstValue("accountId") != transferDto.senderAccountId)
             {
                 return Unauthorized("You aren't allowed to access this account");
             }
             try
             {
-                string transactionId = accountService.Transfer(transferDto.senderAccountId, transferDto.reciverAccountId, transferDto.senderPassword, transferDto.amount, transferDto.transactionservice);
+                string transactionId = accountService.Transfer(transferDto.senderAccountId, transferDto.reciverAccountId, transferDto.senderPassword, amount, transactionService);
                 Transaction transaction = accountService.FindTransaction(transactionId);
                 if (transaction != null)
-                    return Ok(transaction);
+                {
+                    var getTransactionDto = mapper.Map<GetTransactionDto>(transaction);
+                    if((int)transaction.type==0)
+                    {
+                        getTransactionDto.type = "Self Debited";
+                    }
+                    else if ((int)transaction.type == 1)
+                    {
+                        getTransactionDto.type = "Self Credited";
+                    }
+                    else if ((int)transaction.type == 2)
+                    {
+                        getTransactionDto.type = "Transfer";
+                    }
+                    return Ok(mapper.Map<GetTransactionDto>(transaction));
+                }
                 else
-                    return BadRequest("Enter valid Detials");
+                    return BadRequest("Enter valid TransactionId");
             }
-            catch(NotEnoughBalance)
+            catch (NotEnoughBalance)
             {
                 return BadRequest("the Account doesn't have enough Balance");
             }
+            catch (InvalidReceiver)
+            {
+                return BadRequest("Enter a Valid Receiver Id");
+            }
+            catch (InvalidId)
+            { return BadRequest("Invalid accountId or Password"); }
+            
         }
 
         [HttpGet("GetTransactions/{accountId}")]
-        public ActionResult<IEnumerable<GetTransactionDto>> GetTrasnactions(string accountId)
+        public ActionResult<IEnumerable<GetTransactionDto>> GetTranactions(string accountId)
         {
             if (User.FindFirstValue("accountId") != accountId)
             {
                 return Unauthorized("You aren't allowed to view or acess this account's transactions");
             }
-            var transactionList = accountService.GetTransaction(accountId);
-            List<GetTransactionDto> transactionListDto = new() ;
-            foreach(var i in transactionList)
+            try
             {
-                transactionListDto.Add(new GetTransactionDto
+                var transactionList = accountService.GetTransaction(accountId);
+                List<GetTransactionDto> transactionListDto = new();
+                foreach (var i in transactionList)
                 {
-                    tranactionId = i.Item6,
-                    amount = i.Item1,
-                    sourceAccountId = i.Item2,
-                    receiveraccountId = i.Item3,
-                    on = i.Item5,
-                    type = (TransactionType)i.Item4
-                });
+                    transactionListDto.Add(new GetTransactionDto
+                    {
+                        transactionId = i.Item6,
+                        amount = i.Item1,
+                        sourceAccountId = i.Item2,
+                        receiveraccountId = i.Item3,
+                        on = i.Item5,
+                        type = i.Item4 == 0 ? "Self Debited" : i.Item4 == 1 ? "Self Credited" : i.Item3==null ? "debit - Transfer" :"credit - Transfer",
+                        
+                    }); ;
+                }
+                return transactionListDto;
             }
-            return transactionListDto;
-        }
-        /*private string CreateToken(Account account)
-        {
-            List<Claim> claims = new List<Claim>
+            catch (InvalidId)
             {
-                new Claim(ClaimTypes.Role,"user")
-            };
-            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration.GetSection("AppSettings:Token").Value));
-            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-            var token = new JwtSecurityToken
-            (
-                claims: claims,
-                signingCredentials: cred,
-                expires: DateTime.Now.AddDays(1));
-            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-            return jwt;
-        }*/
+                return BadRequest("Ivalid Id");
+            }
+            
+        }
     }
 }

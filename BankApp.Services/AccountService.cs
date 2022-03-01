@@ -101,13 +101,14 @@ namespace BankApp.Services
             }
         }
         public float Deposit(float amount, string accountId, string pin, string currencyCode)
-        {   
+        {
             if (!AccountValidator(accountId, pin))
             {
                 throw new InvalidPin();
             }
             else
             {
+                
                 var account = FindAccount(accountId);
                 var bankId = account.bankId;
                 amount = ConvertToRupees(currencyCode, amount, bankId);
@@ -117,6 +118,7 @@ namespace BankApp.Services
                 db.SaveChangesAsync();
                 return account.balance;
             }
+            
 
         }
         public float ConvertToRupees(string currencyCode, float amount, string bankId)
@@ -133,7 +135,7 @@ namespace BankApp.Services
                 throw new InvalidCurrencyCode();
             }
         }
-        public float WithDraw(float amount, string id, string pin)
+        public float Withdrawl(float amount, string id, string pin)
         {
             if (AccountValidator(id, pin))
             {
@@ -159,63 +161,63 @@ namespace BankApp.Services
         public string Transfer(string senderId, string receiverId, string senderPin, float amount, TransactionService transactionService)
         {
             
-
-            if (AccountValidator(senderId, senderPin))
-            {
-                Account saccount = FindAccount(senderId);
-                Account raccount = db.Accounts.SingleOrDefault(m => m.accountId == receiverId);
-                if (raccount!=null)
+                if (AccountValidator(senderId, senderPin))
                 {
-                    Bank sbank = FindBank(saccount.bankId);
-                    if (saccount.balance < amount)
-                    { throw new NotEnoughBalance(); }
-                    double charge;
-                    if ((int)transactionService == 1)
+                    Account saccount = FindAccount(senderId);
+                    Account raccount = db.Accounts.SingleOrDefault(m => m.accountId == receiverId);
+                    if (raccount != null)
                     {
+                        Bank sbank = FindBank(saccount.bankId);
+                        if (saccount.balance < amount)
+                        { throw new NotEnoughBalance(); }
+                        double charge;
+                        if ((int)transactionService == 1)
+                        {
 
-                        if (string.Equals(raccount.bankId, saccount.bankId))
-                        { charge = sbank.sImps; }
+                            if (string.Equals(raccount.bankId, saccount.bankId))
+                            { charge = sbank.sImps; }
+                            else
+                            {
+                                charge = sbank.oImps;
+                            }
+                        }
+
                         else
                         {
-                            charge = sbank.oImps;
-                        }
-                    }
 
+                            if (string.Equals(raccount.bankId, saccount.bankId)) { charge = sbank.sRtgs; }
+                            else
+                            {
+                                charge = sbank.oRtgs;
+                            }
+                        }
+                        raccount.balance += (float)(amount - (amount * charge));
+                        saccount.balance -= amount;
+                        Transaction transaction = new Transaction
+                        {
+                            sourceAccountId = senderId,
+                            receiveraccountId = receiverId,
+                            amount = amount,
+                            type = TransactionType.Transfer,
+                            on = DateTime.Now,
+                            transactionId = GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), senderId, saccount.bankId),
+
+                        };
+                        db.Transactions.Add(transaction);
+                        db.SaveChanges();
+                        return transaction.transactionId;
+                    }
                     else
                     {
-
-                        if (string.Equals(raccount.bankId, saccount.bankId)) { charge = sbank.sRtgs; }
-                        else
-                        {
-                            charge = sbank.oRtgs;
-                        }
+                        throw new InvalidReceiver();
                     }
-                    raccount.balance += (float)(amount - (amount * charge));
-                    saccount.balance -=amount;
-                    Transaction transaction = new Transaction
-                    {
-                        sourceAccountId = senderId,
-                        receiveraccountId = receiverId,
-                        amount = amount,
-                        type = TransactionType.Transfer,
-                        on = DateTime.Now,
-                        transactionId = GenerateTransId(DateTime.Now.ToString("ddMMyyyyHHmmss"), senderId, saccount.bankId),
 
-                    };
-                    db.Transactions.Add(transaction);
-                    db.SaveChanges();
-                    return transaction.transactionId;
                 }
                 else
                 {
                     throw new InvalidReceiver();
                 }
-
-            }
-            else
-            {
-                throw new InvalidReceiver();
-            }
+            
         }
         private string GenerateTransaction(string senderId,string receiverId, float amount ,TransactionType type,string transactionId)
         {

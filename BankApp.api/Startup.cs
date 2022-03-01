@@ -43,7 +43,7 @@ namespace BankApp.api
 
             services.AddAutoMapper(typeof(AccountMapper).Assembly);
 
-            services.AddControllers();
+            services.AddControllers().AddNewtonsoftJson();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "BankApp.api", Version = "v1" });

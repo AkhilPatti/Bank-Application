@@ -12,7 +12,7 @@ namespace BankApp.Services
 {
     public class BankService : IBankService
     {
-        //#pragma warning disable 0649
+        
 
         BankDbContext db;
         IConfiguration configuration;
@@ -77,6 +77,10 @@ namespace BankApp.Services
         }
         public string CreateAccount(string name, string pin, string phoneNo, string bankId)
         {
+            if (!BankExists(bankId))
+            {
+                throw new InvalidBankId();
+            }
             string accountId = name.Substring(0, 3) + bankId.Substring(0, 3) + DateTime.Now.ToString("ddMMyyyyyHHmmss");
             db.Add(new Account
             {
@@ -167,16 +171,18 @@ namespace BankApp.Services
                 throw new InvalidId();
             }
         }
-        public string AddStaff(string bankId, string name, string password, Genders gender)
+        public string AddStaff(string bankId, string name, string password)
         {
             BankStaff staff = new()
             {
                 staffName = name,
-                password = password,
+                password = BCrypt.Net.BCrypt.HashPassword(password),
                 bankId = bankId,
                 staffId = name.Substring(0, 3) + DateTime.Now.ToString("ddMMyyyyyHHmmss")
             };
             db.Staff.Add(staff);
+            //var staffId = db.Staff.Select(m => m.staffId == staff.staffId);
+            db.SaveChanges();
             return staff.staffId;
         }
         public string FindBankId(string staffId)
@@ -263,6 +269,7 @@ namespace BankApp.Services
                             var account = FindAccount(transaction.sourceAccountId);
                             account.balance += transaction.amount;
                             db.Accounts.Update(account);
+                            db.Transactions.Remove(transaction);
                             db.SaveChanges();
                             return true;
                         }
@@ -272,7 +279,7 @@ namespace BankApp.Services
                         }
 
                     }
-                case 2:
+                case 1:
                     {
                         try
                         {
@@ -282,6 +289,7 @@ namespace BankApp.Services
                             {
                                 account.balance = transaction.amount;
                                 db.Accounts.Update(account);
+                                db.Transactions.Remove(transaction);
                                 db.SaveChanges();
                                 return true;
                             }
@@ -293,7 +301,7 @@ namespace BankApp.Services
                         }
 
                     }
-                case 3:
+                case 2:
                     {
                         Account saccount;
                         try
@@ -315,6 +323,8 @@ namespace BankApp.Services
                         saccount.balance += transaction.amount;
                         db.Accounts.Update(raccount);
                         db.Accounts.Update(saccount);
+                        db.Transactions.Remove(transaction);
+                        db.SaveChanges();
                         break;
                     }
             }

@@ -7,7 +7,7 @@ namespace BankApp.Services
     public interface IBankService
     {
         float AddCurrency(string currencyCode, string bankId);
-        string AddStaff(string bankId, string name, string password, Genders gender);
+        string AddStaff(string bankId, string name, string password);
         bool AuthenticateBankStaff(string staffId, string password);
         string CreateBank(string name);
         string CreateAccount(string name, string pin, string phoneNo, string bankId);

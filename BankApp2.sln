@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BankApp.Models", "BankApp.M
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BankApp.Services", "BankApp.Services\BankApp.Services.csproj", "{86882A1A-99F8-46DD-826F-D457361FF355}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BankApp.CLI2", "BankApp.CLI2\BankApp.CLI2.csproj", "{60F81015-9D23-43BF-A238-9CEB159743D3}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BankApp.api", "BankApp.api\BankApp.api.csproj", "{56140729-4247-44BE-B011-6C85410DF87D}"
 EndProject
 Global
@@ -25,10 +23,6 @@ Global
 		{86882A1A-99F8-46DD-826F-D457361FF355}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86882A1A-99F8-46DD-826F-D457361FF355}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{86882A1A-99F8-46DD-826F-D457361FF355}.Release|Any CPU.Build.0 = Release|Any CPU
-		{60F81015-9D23-43BF-A238-9CEB159743D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{60F81015-9D23-43BF-A238-9CEB159743D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{60F81015-9D23-43BF-A238-9CEB159743D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{60F81015-9D23-43BF-A238-9CEB159743D3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{56140729-4247-44BE-B011-6C85410DF87D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{56140729-4247-44BE-B011-6C85410DF87D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56140729-4247-44BE-B011-6C85410DF87D}.Release|Any CPU.ActiveCfg = Release|Any CPU

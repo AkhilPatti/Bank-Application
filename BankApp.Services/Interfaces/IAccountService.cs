@@ -18,6 +18,6 @@ namespace BankApp.Services
 
         List<(float, string, string, int, DateTime,string)> GetTransaction(string accountId);
         string Transfer(string senderId, string receiverId, string senderPin, float amount, TransactionService transactionService);
-        float WithDraw(float amount, string id, string pin);
+        float Withdrawl(float amount, string id, string pin);
     }
 }
